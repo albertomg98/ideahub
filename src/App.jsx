@@ -1499,9 +1499,7 @@ function ReportsPage({ currentUser, onHome }) {
             {/* Actions */}
             <div style={{ display: "flex", gap: 8 }}>
               <button className="btn btn-primary btn-sm" style={{ flex: 1, justifyContent: "center" }} onClick={() => downloadReport(r)}>⬇️ Scarica</button>
-              {r.uploadedBy === currentUser && (
-                <button className="btn btn-danger btn-sm" onClick={() => removeReport(r.id)}>🗑</button>
-              )}
+              <button className="btn btn-danger btn-sm" onClick={() => removeReport(r.id)}>🗑</button>
             </div>
           </div>
         ))}
