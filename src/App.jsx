@@ -21,18 +21,18 @@ const STYLE = `
   *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
   :root {
-    --bg: #05080f;
-    --surface: #090d16;
-    --surface2: #0f1420;
-    --surface3: #161d2e;
-    --border: #1c2a42;
-    --accent: #3b5bff;
+    --bg: #06090f;
+    --surface: #0a0e18;
+    --surface2: #101624;
+    --surface3: #172030;
+    --border: #1f2e45;
+    --accent: #3d5afe;
     --accent2: #ff4757;
     --accent3: #00c9a7;
-    --text: #eef1f9;
-    --text2: #7a90b8;
+    --text: #eef2ff;
+    --text2: #7b8fb5;
     --text3: #3d5070;
-    --radius: 3px;
+    --radius: 4px;
     --radius-lg: 6px;
   }
 
@@ -48,7 +48,7 @@ const STYLE = `
     letter-spacing: 0.01em;
   }
 
-  ::-webkit-scrollbar { width: 4px; }
+  ::-webkit-scrollbar { width: 3px; }
   ::-webkit-scrollbar-track { background: transparent; }
   ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
 
@@ -57,7 +57,7 @@ const STYLE = `
   .app {
     display: grid;
     grid-template-columns: 260px 1fr;
-    grid-template-rows: 56px 1fr;
+    grid-template-rows: 52px 1fr;
     height: 100vh;
     overflow: hidden;
   }
@@ -124,20 +124,19 @@ const STYLE = `
   .topbar {
     grid-column: 1 / -1;
     background: var(--surface);
-    backdrop-filter: blur(12px);
-    -webkit-backdrop-filter: blur(12px);
     border-bottom: 1px solid var(--border);
     display: flex;
     align-items: center;
-    padding: 0 24px;
-    gap: 16px;
+    padding: 0 32px;
+    gap: 0;
     z-index: 10;
+    height: 52px;
   }
   .topbar-logo {
     font-family: 'Syne', sans-serif;
     font-weight: 800;
-    font-size: 13px;
-    letter-spacing: 0.25em;
+    font-size: 12px;
+    letter-spacing: 0.3em;
     text-transform: uppercase;
     color: #ffffff;
     flex-shrink: 0;
@@ -168,7 +167,6 @@ const STYLE = `
   .avatar.sm { width: 24px; height: 24px; font-size: 10px; }
 
   /* ── SIDEBAR ── */
-  .sidebar-hidden-mobile { display: none !important; }
   .sidebar {
     background: var(--surface);
     border-right: 1px solid var(--border);
@@ -187,8 +185,6 @@ const STYLE = `
     text-transform: uppercase;
     color: var(--accent);
     margin-bottom: 12px;
-    padding-bottom: 8px;
-    border-bottom: 1px solid var(--border);
   }
   .ideas-list { overflow-y: auto; flex: 1; padding: 8px; }
   .idea-item {
@@ -262,15 +258,7 @@ const STYLE = `
   .btn-success:hover { background: #43d9ad44; }
   .btn:disabled { opacity: 0.5; cursor: not-allowed; }
 
-  /* ── FULL WIDTH when sidebar hidden ── */
-  .app.no-sidebar {
-    grid-template-columns: 0px 1fr;
-  }
-  .app.no-sidebar .sidebar { 
-    display: none !important;
-    width: 0;
-    overflow: hidden;
-  }
+
 
   /* ── MAIN ── */
   .main {
@@ -2324,7 +2312,7 @@ export default function App() {
   return (
     <>
       <style>{STYLE}</style>
-      <div className={`app${!(page === "ideas" && !selectedId) ? " no-sidebar" : ""}`}>
+      <div className="app">
         {/* TOPBAR */}
         <div className="topbar">
           <div className="topbar-logo">Idealmente</div>
@@ -2343,15 +2331,15 @@ export default function App() {
                   background: "transparent",
                   border: "none",
                   borderBottom: page === key ? "2px solid var(--accent)" : "2px solid transparent",
-                  padding: "0 16px",
+                  padding: "0 18px",
                   height: "52px",
-                  color: page === key ? "var(--text)" : "var(--text3)",
+                  color: page === key ? "var(--text)" : "var(--text2)",
                   fontSize: 11, fontWeight: 600, cursor: "pointer",
                   fontFamily: "'DM Sans', sans-serif",
                   letterSpacing: "0.1em",
                   textTransform: "uppercase",
                   display: "flex", alignItems: "center", gap: 6,
-                  transition: "all 0.2s",
+                  transition: "color 0.15s, border-color 0.15s",
                 }}
               >{icon} {label}</button>
             ))}
@@ -2408,7 +2396,7 @@ export default function App() {
         </div>
 
         {/* SIDEBAR */}
-        <div className={`sidebar${(selectedId && page === "ideas") || page !== "ideas" ? " sidebar-hidden-mobile" : ""}`}>
+        <div className={`sidebar${selectedId && page === "ideas" ? " sidebar-hidden-mobile" : ""}`}>
           {page === "ideas" && (
             <div className="sidebar-section">
               <button className="btn btn-primary" style={{ width: "100%", justifyContent: "center" }} onClick={() => { setPage("ideas"); setShowNew(true); }}>
