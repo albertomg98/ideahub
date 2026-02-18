@@ -817,7 +817,16 @@ function initials(name) {
 function subscribeIdeas(callback) {
   const q = query(collection(db, "ideas"), orderBy("createdAt", "desc"));
   return onSnapshot(q, snap => {
-    callback(snap.docs.map(d => ({ id: d.id, ...d.data() })));
+    const all = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+    callback(all.filter(i => !i.deletedAt));
+  });
+}
+
+function subscribeTrash(callback) {
+  const q = query(collection(db, "ideas"), orderBy("deletedAt", "desc"));
+  return onSnapshot(q, snap => {
+    const all = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+    callback(all.filter(i => !!i.deletedAt));
   });
 }
 
@@ -826,6 +835,19 @@ async function saveIdea(idea) {
 }
 
 async function removeIdea(id) {
+  await deleteDoc(doc(db, "ideas", id));
+}
+
+async function softDeleteIdea(id, idea) {
+  await setDoc(doc(db, "ideas", id), { ...idea, deletedAt: Date.now() });
+}
+
+async function restoreIdea(idea) {
+  const { deletedAt, ...rest } = idea;
+  await setDoc(doc(db, "ideas", idea.id), rest);
+}
+
+async function permanentDeleteIdea(id) {
   await deleteDoc(doc(db, "ideas", id));
 }
 
@@ -1416,7 +1438,7 @@ function IdeaDetail({ idea, currentUser, onUpdate, onDelete }) {
           </div>
         </div>
         <div className="detail-actions">
-          <button className="btn btn-danger btn-sm" onClick={onDelete}>🗑</button>
+          <button className="btn btn-danger btn-sm" onClick={onDelete} title="Sposta nel cestino">Nel cestino</button>
         </div>
       </div>
 
@@ -1698,6 +1720,90 @@ function EditMeetingModal({ meeting, onClose, onSave }) {
           <button className="btn btn-ghost" onClick={onClose}>Annulla</button>
           <button className="btn btn-primary" onClick={handleSave} disabled={!title.trim() || !date}>Salva</button>
         </div>
+      </div>
+    </div>
+  );
+}
+
+
+// ─── TRASH PAGE ──────────────────────────────────────────────────────────────
+
+function TrashPage({ trash, onRestore, onDelete, onHome }) {
+  const [confirmId, setConfirmId] = useState(null);
+
+  const getFileIcon = (idea) => idea.emoji || "◈";
+
+  return (
+    <div style={{ padding: "20px 16px", maxWidth: 860, margin: "0 auto" }}>
+      {/* Header */}
+      <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 24, paddingBottom: 20, borderBottom: "1px solid var(--border)" }}>
+        <button className="btn btn-ghost btn-sm" onClick={onHome}>← Home</button>
+        <div>
+          <div style={{ fontSize: 9, fontWeight: 700, letterSpacing: "0.2em", textTransform: "uppercase", color: "var(--accent)", marginBottom: 2 }}>Idee eliminate</div>
+          <h2 style={{ fontFamily: "'Syne', sans-serif", fontSize: 16, fontWeight: 800, letterSpacing: "0.1em", textTransform: "uppercase", margin: 0 }}>Cestino</h2>
+        </div>
+        {trash.length > 0 && (
+          <span style={{ marginLeft: "auto", fontSize: 11, color: "var(--text3)" }}>{trash.length} {trash.length === 1 ? "idea" : "idee"}</span>
+        )}
+      </div>
+
+      {trash.length === 0 ? (
+        <div style={{ textAlign: "center", padding: "60px 0" }}>
+          <div style={{ fontSize: 40, marginBottom: 16, opacity: 0.3 }}>◌</div>
+          <h3 style={{ color: "var(--text2)", marginBottom: 8, fontSize: 15 }}>Cestino vuoto</h3>
+          <p style={{ color: "var(--text3)", fontSize: 13 }}>Le idee eliminate appariranno qui.</p>
+        </div>
+      ) : (
+        <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+          {trash.map(idea => (
+            <div key={idea.id} style={{
+              background: "var(--surface)", border: "1px solid var(--border)",
+              borderLeft: "3px solid var(--text3)",
+              borderRadius: "var(--radius)", padding: "16px 20px",
+              opacity: 0.8,
+            }}>
+              <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 10 }}>
+                <div style={{ fontSize: 20, flexShrink: 0 }}>{idea.emoji}</div>
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <div style={{ fontFamily: "'Syne', sans-serif", fontWeight: 700, fontSize: 14, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{idea.title}</div>
+                  <div style={{ fontSize: 11, color: "var(--text3)", marginTop: 2 }}>
+                    Eliminata il {formatDate(idea.deletedAt)} · Creata da {idea.createdBy}
+                  </div>
+                </div>
+              </div>
+
+              {idea.description && (
+                <p style={{ fontSize: 13, color: "var(--text3)", marginBottom: 12, lineHeight: 1.5 }}>
+                  {idea.description.length > 120 ? idea.description.slice(0, 120) + "…" : idea.description}
+                </p>
+              )}
+
+              {confirmId === idea.id ? (
+                <div style={{ display: "flex", alignItems: "center", gap: 8, background: "var(--surface2)", borderRadius: "var(--radius)", padding: "10px 14px" }}>
+                  <span style={{ fontSize: 12, color: "var(--text2)", flex: 1 }}>Eliminazione definitiva — operazione irreversibile.</span>
+                  <button className="btn btn-danger btn-sm" onClick={async () => { await onDelete(idea.id); setConfirmId(null); }}>Conferma</button>
+                  <button className="btn btn-ghost btn-sm" onClick={() => setConfirmId(null)}>Annulla</button>
+                </div>
+              ) : (
+                <div style={{ display: "flex", gap: 8 }}>
+                  <button
+                    className="btn btn-primary btn-sm"
+                    style={{ flex: 1, justifyContent: "center" }}
+                    onClick={() => onRestore(idea)}
+                  >↩ Ripristina</button>
+                  <button
+                    className="btn btn-danger btn-sm"
+                    onClick={() => setConfirmId(idea.id)}
+                  >Elimina definitivamente</button>
+                </div>
+              )}
+            </div>
+          ))}
+        </div>
+      )}
+
+      <div style={{ marginTop: 24, padding: "14px 16px", background: "var(--surface2)", borderRadius: "var(--radius)", fontSize: 12, color: "var(--text3)" }}>
+        Le idee nel cestino sono visibili a tutti i membri ma non compaiono nell'elenco principale.
       </div>
     </div>
   );
@@ -2337,6 +2443,14 @@ export default function App() {
   // Logged in
   const currentUser = user.displayName || user.email;
 
+  const [trash, setTrash] = useState([]);
+
+  useEffect(() => {
+    if (!user) return;
+    const unsub = subscribeTrash(setTrash);
+    return () => unsub();
+  }, [user]);
+
   const createIdea = async (idea) => {
     await saveIdea(idea);
     setSelectedId(idea.id);
@@ -2348,7 +2462,8 @@ export default function App() {
   };
 
   const deleteIdea = async (id) => {
-    await removeIdea(id);
+    const idea = ideas.find(i => i.id === id);
+    if (idea) await softDeleteIdea(id, idea);
     setSelectedId(null);
   };
 
@@ -2377,6 +2492,7 @@ export default function App() {
               ["ideas", "◈", "Idee"],
               ["meetings", "◷", "Meeting"],
               ["reports", "◫", "Documenti"],
+              ["trash", "◌", "Cestino"],
             ].map(([key, icon, label]) => (
               <button
                 key={key}
@@ -2494,6 +2610,13 @@ export default function App() {
             <MeetingsPage onHome={() => { setPage("ideas"); setSelectedId(null); }} />
           ) : page === "reports" ? (
             <ReportsPage currentUser={currentUser} onHome={() => { setPage("ideas"); setSelectedId(null); }} />
+          ) : page === "trash" ? (
+            <TrashPage
+              trash={trash}
+              onRestore={async (idea) => { await restoreIdea(idea); }}
+              onDelete={async (id) => { await permanentDeleteIdea(id); }}
+              onHome={() => { setPage("ideas"); setSelectedId(null); }}
+            />
           ) : selectedId && selected ? (
             <IdeaDetail
               key={selected.id}
