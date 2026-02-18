@@ -1,4 +1,8 @@
 import { useState, useEffect, useRef } from "react";
+import { db } from "./firebase";
+import {
+  collection, doc, getDocs, setDoc, deleteDoc, onSnapshot, orderBy, query
+} from "firebase/firestore";
 
 // ─── Palette & fonts loaded via @import in style tag below ───────────────────
 const STYLE = `
@@ -744,19 +748,36 @@ function initials(name) {
   return name.split(" ").map(w => w[0]).join("").toUpperCase().slice(0, 2);
 }
 
-// ─── STORAGE ─────────────────────────────────────────────────────────────────
+// ─── STORAGE (Firebase) ──────────────────────────────────────────────────────
 
-async function loadIdeas() {
-  try {
-    const r = await window.storage.get("ideas_v1");
-    return r ? JSON.parse(r.value) : [];
-  } catch { return []; }
+function subscribeIdeas(callback) {
+  const q = query(collection(db, "ideas"), orderBy("createdAt", "desc"));
+  return onSnapshot(q, snap => {
+    callback(snap.docs.map(d => ({ id: d.id, ...d.data() })));
+  });
 }
 
-async function saveIdeas(ideas) {
-  try {
-    await window.storage.set("ideas_v1", JSON.stringify(ideas));
-  } catch (e) { console.error("Storage error", e); }
+async function saveIdea(idea) {
+  await setDoc(doc(db, "ideas", idea.id), idea);
+}
+
+async function removeIdea(id) {
+  await deleteDoc(doc(db, "ideas", id));
+}
+
+function subscribeMeetings(callback) {
+  const q = query(collection(db, "meetings"), orderBy("date", "asc"));
+  return onSnapshot(q, snap => {
+    callback(snap.docs.map(d => ({ id: d.id, ...d.data() })));
+  });
+}
+
+async function saveMeeting(meeting) {
+  await setDoc(doc(db, "meetings", meeting.id), meeting);
+}
+
+async function removeMeeting(id) {
+  await deleteDoc(doc(db, "meetings", id));
 }
 
 // ─── AI ANALYSIS ─────────────────────────────────────────────────────────────
@@ -1504,14 +1525,18 @@ function MeetingsPage() {
   const [showNew, setShowNew] = useState(false);
   const minutesRefs = useRef({});
 
-  useEffect(() => { loadMeetings().then(setMeetings); }, []);
+  useEffect(() => {
+    const unsub = subscribeMeetings(setMeetings);
+    return () => unsub();
+  }, []);
 
-  const persistMeetings = (m) => { setMeetings(m); saveMeetings(m); };
-  const createMeeting = (m) => persistMeetings([...meetings, m].sort((a, b) => new Date(a.date) - new Date(b.date)));
-  const deleteMeeting = (id) => persistMeetings(meetings.filter(m => m.id !== id));
+  const createMeeting = async (m) => { await saveMeeting(m); };
+  const deleteMeeting = async (id) => { await removeMeeting(id); };
 
-  const addMinutes = (id, text, fileName) => {
-    persistMeetings(meetings.map(m => m.id === id ? { ...m, minutes: { text, fileName, uploadedAt: Date.now() } } : m));
+  const addMinutes = async (id, text, fileName) => {
+    const m = meetings.find(x => x.id === id);
+    if (!m) return;
+    await saveMeeting({ ...m, minutes: { text, fileName, uploadedAt: Date.now() } });
   };
 
   const today = new Date().toISOString().split("T")[0];
@@ -1784,32 +1809,27 @@ export default function App() {
   }
 
   useEffect(() => {
-    loadIdeas().then(data => {
+    setLoaded(false);
+    const unsub = subscribeIdeas(data => {
       setIdeas(data);
-      if (data.length > 0) setSelectedId(data[0].id);
       setLoaded(true);
     });
+    return () => unsub();
   }, []);
 
-  const persistIdeas = (updated) => {
-    setIdeas(updated);
-    saveIdeas(updated);
-  };
-
-  const createIdea = (idea) => {
-    const updated = [idea, ...ideas];
-    persistIdeas(updated);
+  const createIdea = async (idea) => {
+    await saveIdea(idea);
     setSelectedId(idea.id);
   };
 
-  const updateIdea = (updated) => {
-    persistIdeas(ideas.map(i => i.id === updated.id ? updated : i));
+  const updateIdea = async (updated) => {
+    await saveIdea(updated);
+    setIdeas(prev => prev.map(i => i.id === updated.id ? updated : i));
   };
 
-  const deleteIdea = (id) => {
-    const updated = ideas.filter(i => i.id !== id);
-    persistIdeas(updated);
-    setSelectedId(updated[0]?.id || null);
+  const deleteIdea = async (id) => {
+    await removeIdea(id);
+    setSelectedId(null);
   };
 
   const selected = ideas.find(i => i.id === selectedId);
