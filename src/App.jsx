@@ -1,8 +1,15 @@
 import { useState, useEffect, useRef } from "react";
-import { db } from "./firebase";
+import { db, auth } from "./firebase";
 import {
-  collection, doc, getDocs, setDoc, deleteDoc, onSnapshot, orderBy, query
+  collection, doc, setDoc, deleteDoc, onSnapshot, orderBy, query
 } from "firebase/firestore";
+import {
+  createUserWithEmailAndPassword,
+  signInWithEmailAndPassword,
+  signOut,
+  onAuthStateChanged,
+  updateProfile,
+} from "firebase/auth";
 
 // ─── Palette & fonts loaded via @import in style tag below ───────────────────
 const STYLE = `
@@ -1946,63 +1953,122 @@ function MeetingsPage({ onHome }) {
   );
 }
 
-// ─── ONBOARDING ──────────────────────────────────────────────────────────────
+// ─── AUTH SCREEN ─────────────────────────────────────────────────────────────
 
-function OnboardingScreen({ onEnter }) {
-  const [name, setName] = useState("");
-  const [submitting, setSubmitting] = useState(false);
+function AuthScreen({ onAuth }) {
+  const [mode, setMode] = useState("login"); // "login" | "register"
+  const [displayName, setDisplayName] = useState("");
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [error, setError] = useState("");
+  const [loading, setLoading] = useState(false);
 
-  const handleEnter = () => {
-    const trimmed = name.trim();
-    if (!trimmed || submitting) return;
-    setSubmitting(true);
-    // Small delay ensures React flushes state before parent re-renders
-    setTimeout(() => onEnter(trimmed), 50);
+  const handleSubmit = async () => {
+    setError("");
+    if (!email.trim() || !password.trim()) return;
+    if (mode === "register" && !displayName.trim()) return;
+    setLoading(true);
+    try {
+      if (mode === "register") {
+        const cred = await createUserWithEmailAndPassword(auth, email.trim(), password);
+        await updateProfile(cred.user, { displayName: displayName.trim() });
+        onAuth(cred.user);
+      } else {
+        const cred = await signInWithEmailAndPassword(auth, email.trim(), password);
+        onAuth(cred.user);
+      }
+    } catch (e) {
+      const msgs = {
+        "auth/email-already-in-use": "Email già registrata.",
+        "auth/invalid-email": "Email non valida.",
+        "auth/weak-password": "Password troppo debole (min. 6 caratteri).",
+        "auth/user-not-found": "Nessun account con questa email.",
+        "auth/wrong-password": "Password errata.",
+        "auth/invalid-credential": "Email o password errati.",
+        "auth/too-many-requests": "Troppi tentativi. Riprova tra qualche minuto.",
+      };
+      setError(msgs[e.code] || "Errore: " + e.message);
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
     <div style={{
-      height: "100vh", display: "flex", alignItems: "center", justifyContent: "center",
-      background: "var(--bg)", flexDirection: "column", gap: 0,
+      minHeight: "100vh", display: "flex", alignItems: "center", justifyContent: "center",
+      background: "var(--bg)", padding: 16,
     }}>
       <div style={{
         background: "var(--surface)", border: "1px solid var(--border)",
-        borderRadius: "var(--radius-lg)", padding: "48px 40px", width: 420,
-        textAlign: "center", boxShadow: "0 24px 80px rgba(0,0,0,0.4)",
+        borderRadius: "var(--radius-lg)", padding: "40px 32px", width: "100%", maxWidth: 400,
+        boxShadow: "0 24px 80px rgba(0,0,0,0.4)",
       }}>
-        <div style={{
-          width: 64, height: 64, borderRadius: 20, margin: "0 auto 24px",
-          background: "linear-gradient(135deg, var(--accent), var(--accent3))",
-          display: "flex", alignItems: "center", justifyContent: "center", fontSize: 28,
-        }}>💡</div>
-        <h2 style={{ fontSize: 26, marginBottom: 8, fontFamily: "'Syne', sans-serif" }}>Idealmente</h2>
-        <p style={{ color: "var(--text2)", fontSize: 14, marginBottom: 32 }}>
-          Il tuo spazio collaborativo per valutare idee di business con il tuo team.
-        </p>
-        <div style={{ textAlign: "left", marginBottom: 20 }}>
-          <label className="form-label">Come ti chiami?</label>
-          <input
-            className="form-input"
-            value={name}
-            onChange={e => setName(e.target.value)}
-            onKeyDown={e => e.key === "Enter" && handleEnter()}
-            placeholder="Es. Marco Rossi"
-            autoFocus
-            style={{ fontSize: 15 }}
-          />
+        {/* Logo */}
+        <div style={{ textAlign: "center", marginBottom: 28 }}>
+          <div style={{
+            width: 56, height: 56, borderRadius: 18, margin: "0 auto 16px",
+            background: "linear-gradient(135deg, var(--accent), var(--accent3))",
+            display: "flex", alignItems: "center", justifyContent: "center", fontSize: 26,
+          }}>💡</div>
+          <h2 style={{ fontFamily: "'Syne', sans-serif", fontSize: 24, marginBottom: 4 }}>Idealmente</h2>
+          <p style={{ color: "var(--text3)", fontSize: 13 }}>Business Intelligence Collective</p>
         </div>
+
+        {/* Mode toggle */}
+        <div style={{ display: "flex", background: "var(--surface2)", borderRadius: 10, padding: 4, marginBottom: 24 }}>
+          {[["login", "Accedi"], ["register", "Registrati"]].map(([m, l]) => (
+            <button key={m} onClick={() => { setMode(m); setError(""); }} style={{
+              flex: 1, padding: "8px", borderRadius: 8, border: "none", cursor: "pointer",
+              fontFamily: "'DM Sans', sans-serif", fontSize: 14, fontWeight: 500,
+              background: mode === m ? "var(--surface3)" : "transparent",
+              color: mode === m ? "var(--text)" : "var(--text2)",
+              transition: "all 0.15s",
+            }}>{l}</button>
+          ))}
+        </div>
+
+        {/* Fields */}
+        {mode === "register" && (
+          <div className="form-group">
+            <label className="form-label">Nome visualizzato</label>
+            <input className="form-input" value={displayName} onChange={e => setDisplayName(e.target.value)}
+              placeholder="Es. Marco Rossi" autoFocus />
+          </div>
+        )}
+        <div className="form-group">
+          <label className="form-label">Email</label>
+          <input className="form-input" type="email" value={email} onChange={e => setEmail(e.target.value)}
+            placeholder="mario@email.com" autoFocus={mode === "login"}
+            onKeyDown={e => e.key === "Enter" && handleSubmit()} />
+        </div>
+        <div className="form-group">
+          <label className="form-label">Password</label>
+          <input className="form-input" type="password" value={password} onChange={e => setPassword(e.target.value)}
+            placeholder="••••••••" onKeyDown={e => e.key === "Enter" && handleSubmit()} />
+        </div>
+
+        {error && (
+          <div style={{
+            background: "#ff6b6b18", border: "1px solid #ff6b6b44", borderRadius: 8,
+            padding: "10px 14px", marginBottom: 16, fontSize: 13, color: "#ff6b6b",
+          }}>{error}</div>
+        )}
+
         <button
           className="btn btn-primary"
-          style={{ width: "100%", justifyContent: "center", padding: "12px", fontSize: 15 }}
-          onClick={handleEnter}
-          disabled={!name.trim() || submitting}
+          style={{ width: "100%", justifyContent: "center", padding: "12px", fontSize: 15, marginTop: 4 }}
+          onClick={handleSubmit}
+          disabled={loading || !email.trim() || !password.trim() || (mode === "register" && !displayName.trim())}
         >
-          {submitting ? "Caricamento..." : "Entra →"}
+          {loading ? "⏳ Attendere..." : mode === "login" ? "Accedi →" : "Crea account →"}
         </button>
+
+        {mode === "register" && (
+          <p style={{ color: "var(--text3)", fontSize: 11, textAlign: "center", marginTop: 16, lineHeight: 1.6 }}>
+            Registrandoti accetti di usare questa piattaforma in modo responsabile.
+          </p>
+        )}
       </div>
-      <p style={{ color: "var(--text3)", fontSize: 12, marginTop: 20 }}>
-        Il nome viene salvato solo nel tuo browser
-      </p>
     </div>
   );
 }
@@ -2010,40 +2076,64 @@ function OnboardingScreen({ onEnter }) {
 // ─── APP ─────────────────────────────────────────────────────────────────────
 
 export default function App() {
+  const [user, setUser] = useState(undefined); // undefined = loading, null = not logged in
   const [ideas, setIdeas] = useState([]);
   const [selectedId, setSelectedId] = useState(null);
   const [showNew, setShowNew] = useState(false);
   const [page, setPage] = useState("ideas");
-  const [currentUser, setCurrentUser] = useState(() => localStorage.getItem("idealmente_username") || "");
   const [loaded, setLoaded] = useState(false);
-  const [editingName, setEditingName] = useState(false);
-  const [tempName, setTempName] = useState("");
+  const [showUserMenu, setShowUserMenu] = useState(false);
 
-  // ALL hooks must be called unconditionally before any early return
+  // Listen to Firebase auth state
   useEffect(() => {
-    if (!currentUser) return;
+    const unsub = onAuthStateChanged(auth, (u) => setUser(u ?? null));
+    return () => unsub();
+  }, []);
+
+  // Subscribe to ideas when logged in
+  useEffect(() => {
+    if (!user) return;
     setLoaded(false);
     const unsub = subscribeIdeas(data => {
       setIdeas(data);
       setLoaded(true);
     });
     return () => unsub();
-  }, [currentUser]);
+  }, [user]);
 
-  const handleEnterName = (name) => {
-    localStorage.setItem("idealmente_username", name);
-    setCurrentUser(name);
+  const handleLogout = async () => {
+    await signOut(auth);
+    setUser(null);
+    setShowUserMenu(false);
+    setIdeas([]);
+    setSelectedId(null);
+    setPage("ideas");
   };
 
-  // Show onboarding AFTER all hooks
-  if (!currentUser) {
+  // Loading state
+  if (user === undefined) {
     return (
       <>
         <style>{STYLE}</style>
-        <OnboardingScreen onEnter={handleEnterName} />
+        <div style={{ height: "100vh", display: "flex", alignItems: "center", justifyContent: "center", background: "var(--bg)" }}>
+          <div style={{ color: "var(--text3)", fontSize: 14 }}>⏳ Caricamento...</div>
+        </div>
       </>
     );
   }
+
+  // Not logged in
+  if (!user) {
+    return (
+      <>
+        <style>{STYLE}</style>
+        <AuthScreen onAuth={setUser} />
+      </>
+    );
+  }
+
+  // Logged in
+  const currentUser = user.displayName || user.email;
 
   const createIdea = async (idea) => {
     await saveIdea(idea);
@@ -2065,11 +2155,10 @@ export default function App() {
   const getIdeaScore = (idea) => {
     const allR = Object.values(idea.ratings || {});
     if (!allR.length) return null;
-    const avg = CRITERIA.map(c => {
+    return CRITERIA.map(c => {
       const vals = allR.map(r => r[c.key]).filter(Boolean);
       return vals.length ? vals.reduce((a, b) => a + b, 0) / vals.length : 0;
     }).reduce((a, b) => a + b, 0) / CRITERIA.length;
-    return avg;
   };
 
   return (
@@ -2080,7 +2169,7 @@ export default function App() {
         <div className="topbar">
           <div className="topbar-logo">Idealmente</div>
           <div className="topbar-spacer" />
-          {/* NAV IN TOPBAR */}
+          {/* NAV */}
           <div className="topbar-nav" style={{ display: "flex", gap: 4 }}>
             {[
               ["ideas", "💡", "Idee"],
@@ -2104,90 +2193,85 @@ export default function App() {
             ))}
           </div>
           <div className="topbar-spacer" />
-          <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
-            {editingName ? (
-              <>
-                <input
-                  className="form-input"
-                  value={tempName}
-                  onChange={e => setTempName(e.target.value)}
-                  onKeyDown={e => {
-                    if (e.key === "Enter" && tempName.trim()) {
-                      const n = tempName.trim();
-                      setCurrentUser(n);
-                      localStorage.setItem("idealmente_username", n);
-                      setEditingName(false);
-                    }
-                    if (e.key === "Escape") setEditingName(false);
+          {/* USER MENU */}
+          <div style={{ position: "relative" }}>
+            <div
+              style={{ display: "flex", gap: 8, alignItems: "center", cursor: "pointer" }}
+              onClick={() => setShowUserMenu(v => !v)}
+            >
+              <span style={{ fontSize: 13, color: "var(--text2)" }}>{currentUser}</span>
+              <div className="avatar" style={{ background: `linear-gradient(135deg, ${hashColor(currentUser)}, ${hashColor(currentUser + "2")})` }}>
+                {initials(currentUser)}
+              </div>
+            </div>
+            {showUserMenu && (
+              <div style={{
+                position: "absolute", right: 0, top: "calc(100% + 8px)",
+                background: "var(--surface)", border: "1px solid var(--border)",
+                borderRadius: "var(--radius)", padding: 8, minWidth: 180,
+                boxShadow: "0 8px 32px rgba(0,0,0,0.3)", zIndex: 100,
+              }}>
+                <div style={{ padding: "8px 12px", fontSize: 12, color: "var(--text3)", borderBottom: "1px solid var(--border)", marginBottom: 4 }}>
+                  {user.email}
+                </div>
+                <button
+                  onClick={handleLogout}
+                  style={{
+                    width: "100%", textAlign: "left", background: "none", border: "none",
+                    padding: "8px 12px", fontSize: 13, color: "#ff6b6b", cursor: "pointer",
+                    borderRadius: 6, fontFamily: "'DM Sans', sans-serif",
                   }}
-                  style={{ padding: "4px 10px", fontSize: 13, width: 150 }}
-                  autoFocus
-                />
-                <button className="btn btn-ghost btn-sm" onClick={() => {
-                  if (tempName.trim()) {
-                    const n = tempName.trim();
-                    setCurrentUser(n);
-                    localStorage.setItem("idealmente_username", n);
-                  }
-                  setEditingName(false);
-                }}>✓</button>
-              </>
-            ) : (
-              <span
-                style={{ fontSize: 13, color: "var(--text2)", cursor: "pointer" }}
-                title="Clicca per cambiare nome"
-                onClick={() => { setTempName(currentUser); setEditingName(true); }}
-              >
-                {currentUser} <span style={{ color: "var(--text3)", fontSize: 11 }}>✎</span>
-              </span>
+                  onMouseEnter={e => e.target.style.background = "#ff6b6b18"}
+                  onMouseLeave={e => e.target.style.background = "none"}
+                >
+                  🚪 Esci
+                </button>
+              </div>
             )}
-          </div>
-          <div className="avatar" style={{ background: `linear-gradient(135deg, ${hashColor(currentUser)}, ${hashColor(currentUser + "2")})` }}>
-            {initials(currentUser)}
           </div>
         </div>
 
         {/* SIDEBAR */}
         <div className={`sidebar${selectedId && page === "ideas" ? " sidebar-hidden-mobile" : ""}`}>
           {page === "ideas" && (
-          <div className="sidebar-section">
-            <button className="btn btn-primary" style={{ width: "100%", justifyContent: "center" }} onClick={() => { setPage("ideas"); setShowNew(true); }}>
-              ➕ Nuova Idea
-            </button>
-          </div>
+            <div className="sidebar-section">
+              <button className="btn btn-primary" style={{ width: "100%", justifyContent: "center" }} onClick={() => { setPage("ideas"); setShowNew(true); }}>
+                ➕ Nuova Idea
+              </button>
+            </div>
           )}
           {page === "ideas" && selectedId && (
-          <div className="ideas-list">
-            {!loaded && <div style={{ color: "var(--text3)", fontSize: 13, textAlign: "center", padding: 20 }}>Caricamento...</div>}
-            {loaded && ideas.length === 0 && <div style={{ color: "var(--text3)", fontSize: 13, textAlign: "center", padding: 20 }}>Nessuna idea ancora</div>}
-            {ideas.map(idea => {
-              const score = getIdeaScore(idea);
-              return (
-                <div
-                  key={idea.id}
-                  className={`idea-item ${selectedId === idea.id ? "active" : ""}`}
-                  onClick={() => setSelectedId(idea.id)}
-                >
-                  <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 4 }}>
-                    <span style={{ fontSize: 16 }}>{idea.emoji}</span>
-                    <div className="idea-item-title">{idea.title}</div>
+            <div className="ideas-list">
+              {!loaded && <div style={{ color: "var(--text3)", fontSize: 13, textAlign: "center", padding: 20 }}>Caricamento...</div>}
+              {loaded && ideas.length === 0 && <div style={{ color: "var(--text3)", fontSize: 13, textAlign: "center", padding: 20 }}>Nessuna idea ancora</div>}
+              {ideas.map(idea => {
+                const score = getIdeaScore(idea);
+                return (
+                  <div
+                    key={idea.id}
+                    className={`idea-item ${selectedId === idea.id ? "active" : ""}`}
+                    onClick={() => setSelectedId(idea.id)}
+                  >
+                    <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 4 }}>
+                      <span style={{ fontSize: 16 }}>{idea.emoji}</span>
+                      <div className="idea-item-title">{idea.title}</div>
+                    </div>
+                    <div className="idea-item-meta">
+                      <span>👤 {idea.createdBy}</span>
+                      {score !== null && (
+                        <span className={`score-badge ${getScoreClass(score)}`}>{score.toFixed(1)}</span>
+                      )}
+                      {idea.aiAnalysis && <span title="AI analizzata">🤖</span>}
+                    </div>
                   </div>
-                  <div className="idea-item-meta">
-                    <span>👤 {idea.createdBy}</span>
-                    {score !== null && (
-                      <span className={`score-badge ${getScoreClass(score)}`}>{score.toFixed(1)}</span>
-                    )}
-                    {idea.aiAnalysis && <span title="AI analizzata">🤖</span>}
-                  </div>
-                </div>
-              );
-            })}
-          </div>
+                );
+              })}
+            </div>
           )}
         </div>
 
         {/* MAIN */}
-        <div className="main">
+        <div className="main" onClick={() => showUserMenu && setShowUserMenu(false)}>
           {page === "meetings" ? (
             <MeetingsPage onHome={() => { setPage("ideas"); setSelectedId(null); }} />
           ) : page === "reports" ? (
