@@ -1885,7 +1885,7 @@ export default function App() {
           </div>
           <div className="sidebar-section" style={{ paddingBottom: 8 }}>
             <div
-              onClick={() => { setPage("ideas"); setSelectedId(null); }}}
+              onClick={() => { setPage("ideas"); setSelectedId(null); }}
               style={{
                 display: "flex", alignItems: "center", gap: 8, padding: "8px 10px",
                 borderRadius: "var(--radius)", cursor: "pointer", marginBottom: 4,
