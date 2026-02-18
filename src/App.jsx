@@ -1365,7 +1365,7 @@ async function removeReport(id) {
   await deleteDoc(doc(db, "reports", id));
 }
 
-function ReportsPage({ currentUser }) {
+function ReportsPage({ currentUser, onHome }) {
   const [reports, setReports] = useState([]);
   const [uploading, setUploading] = useState(false);
   const fileRef = useRef();
@@ -1410,7 +1410,7 @@ function ReportsPage({ currentUser }) {
 
   const getFileIcon = (name) => {
     const ext = name.split(".").pop().toLowerCase();
-    if (["pdf"].includes(ext)) return "📄";
+    if (ext === "pdf") return "📄";
     if (["doc", "docx"].includes(ext)) return "📝";
     if (["xls", "xlsx"].includes(ext)) return "📊";
     if (["ppt", "pptx"].includes(ext)) return "📋";
@@ -1419,33 +1419,33 @@ function ReportsPage({ currentUser }) {
   };
 
   return (
-    <div style={{ padding: 32, maxWidth: 860, margin: "0 auto" }}>
-      <div style={{ display: "flex", alignItems: "center", marginBottom: 28 }}>
-        <div>
-          <h2 style={{ fontSize: 22, marginBottom: 4 }}>📁 Report</h2>
-          <p style={{ color: "var(--text2)", fontSize: 14 }}>Carica e condividi documenti con il tuo team</p>
-        </div>
-        <button
-          className="btn btn-primary"
-          style={{ marginLeft: "auto" }}
-          onClick={() => fileRef.current?.click()}
-          disabled={uploading}
-        >
-          {uploading ? "⏳ Caricamento..." : "⬆️ Carica Report"}
-        </button>
-        <input
-          ref={fileRef} type="file" style={{ display: "none" }}
-          accept=".pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx,.txt,.md,.png,.jpg,.jpeg"
-          onChange={e => handleFile(e.target.files[0])}
-        />
+    <div style={{ padding: "20px 16px", maxWidth: 860, margin: "0 auto" }}>
+      {/* Back + Title */}
+      <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 16 }}>
+        <button className="btn btn-ghost btn-sm" onClick={onHome}>← Home</button>
+        <h2 style={{ fontSize: 20, margin: 0 }}>📁 Report</h2>
       </div>
+
+      {/* Full-width CTA */}
+      <button
+        className="btn btn-primary"
+        style={{ width: "100%", justifyContent: "center", marginBottom: 20, padding: "12px", fontSize: 15 }}
+        onClick={() => fileRef.current?.click()}
+        disabled={uploading}
+      >
+        {uploading ? "⏳ Caricamento..." : "⬆️ Carica Report"}
+      </button>
+      <input
+        ref={fileRef} type="file" style={{ display: "none" }}
+        accept=".pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx,.txt,.md,.png,.jpg,.jpeg"
+        onChange={e => handleFile(e.target.files[0])}
+      />
 
       {reports.length === 0 && !uploading && (
         <div style={{ textAlign: "center", padding: "60px 0" }}>
-          <div style={{ fontSize: 56, marginBottom: 16 }}>📁</div>
-          <h3 style={{ color: "var(--text2)", marginBottom: 8 }}>Nessun report ancora</h3>
-          <p style={{ color: "var(--text3)", marginBottom: 24, fontSize: 14 }}>Carica documenti che il tuo team potrà scaricare.</p>
-          <button className="btn btn-primary" onClick={() => fileRef.current?.click()}>⬆️ Carica il primo report</button>
+          <div style={{ fontSize: 48, marginBottom: 12 }}>📁</div>
+          <h3 style={{ color: "var(--text2)", marginBottom: 8, fontSize: 16 }}>Nessun report ancora</h3>
+          <p style={{ color: "var(--text3)", fontSize: 13 }}>Carica documenti che il tuo team potrà scaricare.</p>
         </div>
       )}
 
@@ -1453,26 +1453,28 @@ function ReportsPage({ currentUser }) {
         {reports.map(r => (
           <div key={r.id} style={{
             background: "var(--surface)", border: "1px solid var(--border)",
-            borderRadius: "var(--radius)", padding: "16px 20px",
-            display: "flex", alignItems: "center", gap: 16,
+            borderRadius: "var(--radius)", padding: "14px 16px",
             transition: "border-color 0.15s",
           }}
             onMouseEnter={e => e.currentTarget.style.borderColor = "var(--accent)"}
             onMouseLeave={e => e.currentTarget.style.borderColor = "var(--border)"}
           >
-            <div style={{ fontSize: 28, flexShrink: 0 }}>{getFileIcon(r.name)}</div>
-            <div style={{ flex: 1, minWidth: 0 }}>
-              <div style={{ fontWeight: 600, fontSize: 14, marginBottom: 4, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{r.name}</div>
-              <div style={{ fontSize: 12, color: "var(--text3)", display: "flex", gap: 12 }}>
-                <span>👤 {r.uploadedBy}</span>
-                <span>📅 {formatDate(r.uploadedAt)}</span>
-                <span>💾 {formatSize(r.size)}</span>
-              </div>
+            {/* Top row: icon + name */}
+            <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 10 }}>
+              <div style={{ fontSize: 24, flexShrink: 0 }}>{getFileIcon(r.name)}</div>
+              <div style={{ fontWeight: 600, fontSize: 14, flex: 1, minWidth: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{r.name}</div>
             </div>
-            <div style={{ display: "flex", gap: 8, flexShrink: 0 }}>
-              <button className="btn btn-success btn-sm" onClick={() => downloadReport(r)}>⬇️ Scarica</button>
+            {/* Meta row: horizontal */}
+            <div style={{ display: "flex", gap: 12, flexWrap: "wrap", marginBottom: 10, fontSize: 12, color: "var(--text3)" }}>
+              <span>👤 {r.uploadedBy}</span>
+              <span>📅 {formatDate(r.uploadedAt)}</span>
+              <span>💾 {formatSize(r.size)}</span>
+            </div>
+            {/* Actions */}
+            <div style={{ display: "flex", gap: 8 }}>
+              <button className="btn btn-primary btn-sm" style={{ flex: 1, justifyContent: "center" }} onClick={() => downloadReport(r)}>⬇️ Scarica</button>
               {r.uploadedBy === currentUser && (
-                <button className="btn btn-danger btn-sm" onClick={() => removeReport(r.id)}>✕</button>
+                <button className="btn btn-danger btn-sm" onClick={() => removeReport(r.id)}>🗑</button>
               )}
             </div>
           </div>
@@ -1547,21 +1549,19 @@ function EditMeetingModal({ meeting, onClose, onSave }) {
 
 function HomePage({ ideas, onSelect, onNew, getIdeaScore }) {
   return (
-    <div style={{ padding: 32, maxWidth: 1100, margin: "0 auto" }}>
-      <div style={{ display: "flex", alignItems: "flex-end", justifyContent: "space-between", marginBottom: 32 }}>
-        <div>
-          <h2 style={{ fontSize: 26, marginBottom: 6 }}>👋 Benvenuto su Idealmente</h2>
-          <p style={{ color: "var(--text2)", fontSize: 14 }}>Seleziona un'idea da approfondire o creane una nuova.</p>
-        </div>
-        <button className="btn btn-primary" onClick={onNew}>➕ Nuova Idea</button>
+    <div style={{ padding: "24px 16px", maxWidth: 1100, margin: "0 auto" }}>
+      {/* Header */}
+      <div style={{ marginBottom: 20 }}>
+        <h2 style={{ fontSize: 22, marginBottom: 6 }}>👋 Benvenuto su Idealmente</h2>
+        <p style={{ color: "var(--text2)", fontSize: 14, marginBottom: 16 }}>Seleziona un'idea da approfondire o creane una nuova.</p>
+        <button className="btn btn-primary" style={{ width: "100%" }} onClick={onNew}>➕ Nuova Idea</button>
       </div>
 
       {ideas.length === 0 ? (
-        <div style={{ textAlign: "center", padding: "80px 0" }}>
-          <div style={{ fontSize: 56, marginBottom: 16 }}>💡</div>
-          <h3 style={{ marginBottom: 8, color: "var(--text2)" }}>Nessuna idea ancora</h3>
-          <p style={{ color: "var(--text3)", marginBottom: 24, fontSize: 14 }}>Crea la prima idea e inizia a collaborare con il tuo team.</p>
-          <button className="btn btn-primary" onClick={onNew}>➕ Crea la prima idea</button>
+        <div style={{ textAlign: "center", padding: "60px 0" }}>
+          <div style={{ fontSize: 48, marginBottom: 16 }}>💡</div>
+          <h3 style={{ marginBottom: 8, color: "var(--text2)", fontSize: 16 }}>Nessuna idea ancora</h3>
+          <p style={{ color: "var(--text3)", marginBottom: 20, fontSize: 13 }}>Crea la prima idea e inizia a collaborare con il tuo team.</p>
         </div>
       ) : (
         <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(280px, 1fr))", gap: 16 }}>
@@ -1580,39 +1580,36 @@ function HomePage({ ideas, onSelect, onNew, getIdeaScore }) {
                 onClick={() => onSelect(idea.id)}
                 style={{
                   background: "var(--surface)", border: "1px solid var(--border)",
-                  borderRadius: "var(--radius-lg)", padding: 24, cursor: "pointer",
-                  transition: "all 0.15s", display: "flex", flexDirection: "column", gap: 16,
+                  borderRadius: "var(--radius-lg)", padding: 20, cursor: "pointer",
+                  transition: "all 0.15s", display: "flex", flexDirection: "column", gap: 14,
                 }}
                 onMouseEnter={e => { e.currentTarget.style.borderColor = "var(--accent)"; e.currentTarget.style.transform = "translateY(-2px)"; }}
                 onMouseLeave={e => { e.currentTarget.style.borderColor = "var(--border)"; e.currentTarget.style.transform = "none"; }}
               >
-                {/* Header */}
                 <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
                   <div style={{
-                    width: 48, height: 48, borderRadius: 14, flexShrink: 0,
+                    width: 44, height: 44, borderRadius: 12, flexShrink: 0,
                     background: "linear-gradient(135deg, var(--accent)33, var(--accent3)22)",
                     border: "1px solid var(--border)",
-                    display: "flex", alignItems: "center", justifyContent: "center", fontSize: 22,
+                    display: "flex", alignItems: "center", justifyContent: "center", fontSize: 20,
                   }}>{idea.emoji}</div>
                   <div style={{ flex: 1, minWidth: 0 }}>
-                    <div style={{ fontFamily: "'Syne', sans-serif", fontWeight: 700, fontSize: 15, marginBottom: 2, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{idea.title}</div>
+                    <div style={{ fontFamily: "'Syne', sans-serif", fontWeight: 700, fontSize: 14, marginBottom: 2, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{idea.title}</div>
                     <div style={{ fontSize: 11, color: "var(--text3)" }}>👤 {idea.createdBy} · {formatDate(idea.createdAt)}</div>
                   </div>
                   {verdict && <span className={`verdict-chip ${verdict.cls}`} style={{ fontSize: 10, flexShrink: 0 }}>{verdict.label}</span>}
                 </div>
 
-                {/* Description */}
                 {idea.description && (
                   <p style={{ fontSize: 13, color: "var(--text2)", lineHeight: 1.6, display: "-webkit-box", WebkitLineClamp: 2, WebkitBoxOrient: "vertical", overflow: "hidden" }}>
                     {idea.description}
                   </p>
                 )}
 
-                {/* Score bars */}
-                <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+                <div style={{ display: "flex", flexDirection: "column", gap: 5 }}>
                   {avgByCriteria.map(c => (
                     <div key={c.key} style={{ display: "flex", alignItems: "center", gap: 8 }}>
-                      <div style={{ width: 80, fontSize: 10, color: "var(--text3)", textTransform: "uppercase", letterSpacing: "0.3px", flexShrink: 0 }}>{c.label.slice(0, 10)}</div>
+                      <div style={{ width: 76, fontSize: 10, color: "var(--text3)", textTransform: "uppercase", letterSpacing: "0.3px", flexShrink: 0 }}>{c.label.slice(0, 10)}</div>
                       <div className="progress-bar" style={{ height: 4 }}>
                         <div className="progress-fill" style={{ width: `${c.avg * 10}%`, background: c.color }} />
                       </div>
@@ -1621,12 +1618,11 @@ function HomePage({ ideas, onSelect, onNew, getIdeaScore }) {
                   ))}
                 </div>
 
-                {/* Footer stats */}
                 <div style={{ display: "flex", gap: 12, paddingTop: 8, borderTop: "1px solid var(--border)", fontSize: 12, color: "var(--text3)" }}>
-                  <span>💬 {(idea.comments || []).length} commenti</span>
-                  <span>⭐ {allRatings.length} valutazioni</span>
-                  {idea.aiAnalysis && <span style={{ color: "var(--accent)", marginLeft: "auto" }}>🤖 AI analizzata</span>}
-                  {idea.fileName && <span>📎 doc</span>}
+                  <span>💬 {(idea.comments || []).length}</span>
+                  <span>⭐ {allRatings.length}</span>
+                  {idea.aiAnalysis && <span style={{ color: "var(--accent)", marginLeft: "auto" }}>🤖 AI</span>}
+                  {idea.fileName && <span>📎</span>}
                 </div>
               </div>
             );
@@ -1638,17 +1634,6 @@ function HomePage({ ideas, onSelect, onNew, getIdeaScore }) {
 }
 
 // ─── MEETINGS ────────────────────────────────────────────────────────────────
-
-async function loadMeetings() {
-  try {
-    const r = await window.storage.get("meetings_v1");
-    return r ? JSON.parse(r.value) : [];
-  } catch { return []; }
-}
-
-async function saveMeetings(meetings) {
-  try { await window.storage.set("meetings_v1", JSON.stringify(meetings)); } catch {}
-}
 
 function googleCalendarUrl({ title, date, time, duration, notes }) {
   const dt = new Date(`${date}T${time || "10:00"}`);
@@ -1725,20 +1710,7 @@ function NewMeetingModal({ onClose, onCreate }) {
   );
 }
 
-function MeetingsPage() {
-  const [meetings, setMeetings] = useState([]);
-  const [showNew, setShowNew] = useState(false);
-  const [editingMeeting, setEditingMeeting] = useState(null);
-  const minutesRefs = useRef({});
-
-  useEffect(() => {
-    const unsub = subscribeMeetings(setMeetings);
-    return () => unsub();
-  }, []);
-
-  const createMeeting = async (m) => { await saveMeeting(m); };
-  const deleteMeeting = async (id) => { await removeMeeting(id); };
-  const updateMeeting = async (m) => { await saveMeeting(m); };
+// ─── ONBOARDING ──────────────────────────────────────────────────────────────
 
   const addMinutes = async (id, text, fileName) => {
     const m = meetings.find(x => x.id === id);
@@ -1761,13 +1733,10 @@ function MeetingsPage() {
 
   return (
     <div style={{ padding: 32, maxWidth: 860, margin: "0 auto" }}>
-      <div style={{ display: "flex", alignItems: "center", marginBottom: 28 }}>
-        <div>
-          <h2 style={{ fontSize: 22, marginBottom: 4 }}>📅 Meeting</h2>
-          <p style={{ color: "var(--text2)", fontSize: 14 }}>Pianifica sessioni di review con il tuo team</p>
-        </div>
-        <button className="btn btn-primary" style={{ marginLeft: "auto" }} onClick={() => setShowNew(true)}>➕ Nuovo Meeting</button>
-      </div>
+      {/* FULL WIDTH CTA */}
+      <button className="btn btn-primary" style={{ width: "100%", justifyContent: "center", marginBottom: 20, padding: "12px" }} onClick={() => setShowNew(true)}>
+        📅 Nuovo Meeting
+      </button>
 
       {/* NEXT MEETING BANNER */}
       {nextMeeting ? (
@@ -1922,6 +1891,226 @@ function MeetingsPage() {
         <div style={{ textAlign: "center", padding: "40px 0", color: "var(--text3)" }}>
           <div style={{ fontSize: 48, marginBottom: 16 }}>📅</div>
           <p>Nessun meeting ancora. Creane uno!</p>
+        </div>
+      )}
+
+      {showNew && <NewMeetingModal onClose={() => setShowNew(false)} onCreate={createMeeting} />}
+      {editingMeeting && <EditMeetingModal meeting={editingMeeting} onClose={() => setEditingMeeting(null)} onSave={updateMeeting} />}
+    </div>
+  );
+}
+
+function MeetingsPage({ onHome }) {
+  const [meetings, setMeetings] = useState([]);
+  const [showNew, setShowNew] = useState(false);
+  const [editingMeeting, setEditingMeeting] = useState(null);
+  const minutesRefs = useRef({});
+
+  useEffect(() => {
+    const unsub = subscribeMeetings(setMeetings);
+    return () => unsub();
+  }, []);
+
+  const createMeeting = async (m) => { await saveMeeting(m); };
+  const deleteMeeting = async (id) => { await removeMeeting(id); };
+  const updateMeeting = async (m) => { await saveMeeting(m); };
+
+  const addMinutes = async (id, text, fileName) => {
+    const m = meetings.find(x => x.id === id);
+    if (!m) return;
+    await saveMeeting({ ...m, minutes: { text, fileName, uploadedAt: Date.now() } });
+  };
+
+  const today = new Date().toISOString().split("T")[0];
+  const upcoming = meetings.filter(m => m.date >= today).sort((a, b) => new Date(a.date) - new Date(b.date));
+  const past = meetings.filter(m => m.date < today).sort((a, b) => new Date(b.date) - new Date(a.date));
+  const nextMeeting = upcoming[0] || null;
+
+  const fmtDate = (date) => new Date(date + "T12:00").toLocaleDateString("it-IT", { weekday: "short", day: "numeric", month: "long" });
+  const daysUntil = (date) => {
+    const diff = Math.ceil((new Date(date + "T12:00") - new Date()) / 86400000);
+    if (diff === 0) return "oggi";
+    if (diff === 1) return "domani";
+    return `tra ${diff} giorni`;
+  };
+
+  // SVG logos inline
+  const GoogleLogo = () => (
+    <svg width="14" height="14" viewBox="0 0 24 24" style={{ flexShrink: 0 }}>
+      <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
+      <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/>
+      <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"/>
+      <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/>
+    </svg>
+  );
+
+  const OutlookLogo = () => (
+    <svg width="14" height="14" viewBox="0 0 24 24" style={{ flexShrink: 0 }}>
+      <path fill="#0078D4" d="M24 12.204l-6.857-1.645v3.775L24 15.98V12.204z"/>
+      <path fill="#0078D4" d="M13.714 0L0 2.449v19.102L13.714 24V0z"/>
+      <path fill="#fff" d="M6.857 8.163c-2.262 0-3.755 1.742-3.755 4.163 0 2.318 1.493 4.163 3.755 4.163s3.755-1.845 3.755-4.163c0-2.421-1.493-4.163-3.755-4.163zm0 6.694c-1.14 0-1.959-1.039-1.959-2.531 0-1.594.819-2.531 1.959-2.531s1.959.937 1.959 2.531c0 1.492-.819 2.531-1.959 2.531z"/>
+      <path fill="#0078D4" d="M13.714 10.531H24v2.939H13.714v-2.939z"/>
+    </svg>
+  );
+
+  return (
+    <div style={{ padding: "20px 16px", maxWidth: 860, margin: "0 auto" }}>
+      {/* Back + Title */}
+      <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 16 }}>
+        <button className="btn btn-ghost btn-sm" onClick={onHome}>← Home</button>
+        <h2 style={{ fontSize: 20, margin: 0 }}>📅 Meeting</h2>
+      </div>
+
+      {/* Full-width CTA */}
+      <button className="btn btn-primary" style={{ width: "100%", justifyContent: "center", marginBottom: 20, padding: "12px", fontSize: 15 }} onClick={() => setShowNew(true)}>
+        📅 Nuovo Meeting
+      </button>
+
+      {/* NEXT MEETING BANNER */}
+      {nextMeeting ? (
+        <div style={{
+          background: "linear-gradient(135deg, var(--accent)18, var(--accent3)10)",
+          border: "1px solid var(--accent)44",
+          borderRadius: "var(--radius-lg)", padding: "16px",
+          marginBottom: 20,
+        }}>
+          <div style={{ fontSize: 11, color: "var(--accent)", fontWeight: 700, textTransform: "uppercase", letterSpacing: 1, marginBottom: 8 }}>
+            🔔 Prossimo Meeting — {daysUntil(nextMeeting.date)}
+          </div>
+          <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 8 }}>
+            <div style={{
+              width: 48, height: 48, borderRadius: 12, background: "var(--accent)22",
+              border: "1px solid var(--accent)44",
+              display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", flexShrink: 0,
+            }}>
+              <div style={{ fontFamily: "'Syne', sans-serif", fontSize: 18, fontWeight: 800, color: "var(--accent)", lineHeight: 1 }}>
+                {new Date(nextMeeting.date + "T12:00").getDate()}
+              </div>
+              <div style={{ fontSize: 9, color: "var(--text3)", textTransform: "uppercase" }}>
+                {new Date(nextMeeting.date + "T12:00").toLocaleDateString("it-IT", { month: "short" })}
+              </div>
+            </div>
+            <div style={{ flex: 1, minWidth: 0 }}>
+              <div style={{ fontFamily: "'Syne', sans-serif", fontSize: 16, fontWeight: 700, marginBottom: 4, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{nextMeeting.title}</div>
+              <div style={{ fontSize: 12, color: "var(--text2)", display: "flex", gap: 10, flexWrap: "wrap" }}>
+                <span>{fmtDate(nextMeeting.date)}</span>
+                <span>🕐 {nextMeeting.time}</span>
+                <span>⏱ {nextMeeting.duration}min</span>
+              </div>
+            </div>
+          </div>
+          {nextMeeting.participants?.length > 0 && (
+            <div style={{ display: "flex", gap: 4, flexWrap: "wrap", marginBottom: 8 }}>
+              {nextMeeting.participants.map((p, i) => (
+                <span key={i} style={{ fontSize: 11, background: "var(--surface3)", borderRadius: 20, padding: "2px 8px", color: "var(--text2)" }}>{p}</span>
+              ))}
+            </div>
+          )}
+          <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+            <a className="cal-btn" href={googleCalendarUrl(nextMeeting)} target="_blank" rel="noreferrer" style={{ display: "flex", alignItems: "center", gap: 5 }}>
+              <GoogleLogo /> Google Calendar
+            </a>
+            <a className="cal-btn" href={outlookCalendarUrl(nextMeeting)} target="_blank" rel="noreferrer" style={{ display: "flex", alignItems: "center", gap: 5 }}>
+              <OutlookLogo /> Outlook
+            </a>
+            <button className="btn btn-ghost btn-sm" onClick={() => setEditingMeeting(nextMeeting)}>✏️</button>
+            <button className="btn btn-danger btn-sm" onClick={() => deleteMeeting(nextMeeting.id)}>✕</button>
+          </div>
+        </div>
+      ) : (
+        <div style={{
+          background: "var(--surface)", border: "1px dashed var(--border)",
+          borderRadius: "var(--radius-lg)", padding: "20px", marginBottom: 20,
+          textAlign: "center", color: "var(--text3)", fontSize: 14,
+        }}>
+          Nessun meeting pianificato. <span style={{ color: "var(--accent)", cursor: "pointer" }} onClick={() => setShowNew(true)}>Creane uno →</span>
+        </div>
+      )}
+
+      {/* OTHER UPCOMING */}
+      {upcoming.length > 1 && (
+        <div className="card" style={{ marginBottom: 16 }}>
+          <div className="card-title">🗓 Prossimi Meeting</div>
+          {upcoming.slice(1).map(m => (
+            <div key={m.id} className="meeting-card">
+              <div className="meeting-date-box" style={{ borderColor: "var(--accent)44" }}>
+                <div className="day">{new Date(m.date + "T12:00").getDate()}</div>
+                <div className="month">{new Date(m.date + "T12:00").toLocaleDateString("it-IT", { month: "short" })}</div>
+              </div>
+              <div className="meeting-info">
+                <div className="meeting-title">{m.title}</div>
+                <div className="meeting-meta">
+                  <span>🕐 {m.time}</span>
+                  <span>⏱ {m.duration}min</span>
+                  {m.participants?.length > 0 && <span>👥 {m.participants.length}</span>}
+                </div>
+              </div>
+              <div className="meeting-actions">
+                <a className="cal-btn" href={googleCalendarUrl(m)} target="_blank" rel="noreferrer" style={{ display: "flex", alignItems: "center", gap: 4 }}><GoogleLogo /></a>
+                <a className="cal-btn" href={outlookCalendarUrl(m)} target="_blank" rel="noreferrer" style={{ display: "flex", alignItems: "center", gap: 4 }}><OutlookLogo /></a>
+                <button className="btn btn-ghost btn-sm" onClick={() => setEditingMeeting(m)}>✏️</button>
+                <button className="btn btn-danger btn-sm" onClick={() => deleteMeeting(m.id)}>✕</button>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+
+      {/* PAST MEETINGS */}
+      {past.length > 0 && (
+        <div className="card">
+          <div className="card-title">🕘 Meeting Passati ({past.length})</div>
+          {past.map(m => (
+            <div key={m.id} className="meeting-card meeting-past" style={{ flexDirection: "column", alignItems: "stretch", gap: 10 }}>
+              <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+                <div className="meeting-date-box">
+                  <div className="day">{new Date(m.date + "T12:00").getDate()}</div>
+                  <div className="month">{new Date(m.date + "T12:00").toLocaleDateString("it-IT", { month: "short" })}</div>
+                </div>
+                <div className="meeting-info" style={{ flex: 1 }}>
+                  <div className="meeting-title">{m.title}</div>
+                  <div className="meeting-meta">
+                    <span>{fmtDate(m.date)}</span>
+                    <span>⏱ {m.duration}min</span>
+                  </div>
+                </div>
+                <button className="btn btn-ghost btn-sm" onClick={() => setEditingMeeting(m)}>✏️</button>
+                <button className="btn btn-danger btn-sm" onClick={() => deleteMeeting(m.id)}>✕</button>
+              </div>
+              {m.notes && <div style={{ fontSize: 12, color: "var(--text3)", fontStyle: "italic" }}>📝 {m.notes}</div>}
+              <div>
+                {m.minutes ? (
+                  <div style={{ background: "var(--surface2)", border: "1px solid var(--border)", borderRadius: 8, padding: "10px 14px" }}>
+                    <div style={{ fontSize: 12, color: "var(--accent3)", marginBottom: 4, fontWeight: 600 }}>📋 {m.minutes.fileName}</div>
+                    <div style={{ fontSize: 12, color: "var(--text2)", lineHeight: 1.6, maxHeight: 100, overflow: "auto" }}>
+                      {m.minutes.text.slice(0, 400)}{m.minutes.text.length > 400 ? "…" : ""}
+                    </div>
+                  </div>
+                ) : (
+                  <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                    <span style={{ fontSize: 12, color: "var(--text3)" }}>Nessuna minute</span>
+                    <button className="btn btn-ghost btn-sm" onClick={() => minutesRefs.current[m.id]?.click()}>📎 Allega</button>
+                    <input type="file" style={{ display: "none" }} accept=".txt,.md,.pdf,.doc,.docx"
+                      ref={el => minutesRefs.current[m.id] = el}
+                      onChange={e => {
+                        const f = e.target.files[0]; if (!f) return;
+                        const reader = new FileReader();
+                        reader.onload = ev => addMinutes(m.id, ev.target.result, f.name);
+                        reader.readAsText(f);
+                      }}
+                    />
+                  </div>
+                )}
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+
+      {meetings.length === 0 && (
+        <div style={{ textAlign: "center", padding: "40px 0", color: "var(--text3)" }}>
+          <div style={{ fontSize: 40, marginBottom: 12 }}>📅</div>
+          <p>Nessun meeting ancora.</p>
         </div>
       )}
 
@@ -2134,12 +2323,14 @@ export default function App() {
 
         {/* SIDEBAR */}
         <div className="sidebar">
+          {page === "ideas" && (
           <div className="sidebar-section">
             <button className="btn btn-primary" style={{ width: "100%", justifyContent: "center" }} onClick={() => { setPage("ideas"); setShowNew(true); }}>
               ➕ Nuova Idea
             </button>
           </div>
-          {page === "ideas" && (
+          )}
+          {page === "ideas" && selectedId && (
           <div className="ideas-list">
             {!loaded && <div style={{ color: "var(--text3)", fontSize: 13, textAlign: "center", padding: 20 }}>Caricamento...</div>}
             {loaded && ideas.length === 0 && <div style={{ color: "var(--text3)", fontSize: 13, textAlign: "center", padding: 20 }}>Nessuna idea ancora</div>}
@@ -2172,9 +2363,9 @@ export default function App() {
         {/* MAIN */}
         <div className="main">
           {page === "meetings" ? (
-            <MeetingsPage />
+            <MeetingsPage onHome={() => { setPage("ideas"); setSelectedId(null); }} />
           ) : page === "reports" ? (
-            <ReportsPage currentUser={currentUser} />
+            <ReportsPage currentUser={currentUser} onHome={() => { setPage("ideas"); setSelectedId(null); }} />
           ) : selectedId && selected ? (
             <IdeaDetail
               key={selected.id}
