@@ -55,31 +55,41 @@ const STYLE = `
   @media (max-width: 768px) {
     .app {
       grid-template-columns: 1fr;
-      grid-template-rows: 56px auto 1fr;
+      grid-template-rows: auto auto 1fr;
     }
+    .topbar {
+      flex-wrap: wrap;
+      padding: 10px 16px;
+      gap: 10px;
+      height: auto;
+    }
+    .topbar-logo { font-size: 16px; }
+    .topbar-spacer { display: none; }
+    .topbar-nav { order: 3; width: 100%; justify-content: center; }
+    .topbar-nav button { flex: 1; justify-content: center; font-size: 12px; padding: 6px 8px; }
     .sidebar {
       grid-column: 1;
-      grid-row: 2;
       border-right: none;
       border-bottom: 1px solid var(--border);
       flex-direction: row;
       overflow-x: auto;
       overflow-y: hidden;
       height: auto;
-      max-height: 140px;
+      max-height: 110px;
     }
-    .sidebar-section { border-bottom: none; border-right: 1px solid var(--border); padding: 10px; flex-shrink: 0; }
+    .sidebar-section { border-bottom: none; border-right: 1px solid var(--border); padding: 8px; flex-shrink: 0; }
     .ideas-list { display: flex; flex-direction: row; gap: 6px; padding: 8px; overflow-x: auto; overflow-y: hidden; }
-    .idea-item { min-width: 160px; margin-bottom: 0; }
-    .main { grid-column: 1; grid-row: 3; }
+    .idea-item { min-width: 150px; margin-bottom: 0; }
+    .main { overflow-y: auto; }
     .idea-detail { padding: 16px; }
     .detail-header { flex-wrap: wrap; }
     .detail-actions { width: 100%; }
     .swot-grid { grid-template-columns: 1fr; }
     .score-grid { grid-template-columns: repeat(2, 1fr); }
-    .topbar-sub { display: none; }
-    .modal { width: 95vw; padding: 20px; }
+    .modal { width: 95vw; padding: 16px; max-height: 90vh; overflow-y: auto; }
     .form-row { flex-direction: column; }
+    .meeting-card { flex-wrap: wrap; }
+    .meeting-actions { width: 100%; justify-content: flex-end; }
   }
 
   /* ── TOPBAR ── */
@@ -1988,18 +1998,29 @@ export default function App() {
   const [ideas, setIdeas] = useState([]);
   const [selectedId, setSelectedId] = useState(null);
   const [showNew, setShowNew] = useState(false);
-  const [page, setPage] = useState("ideas"); // "ideas" | "meetings"
+  const [page, setPage] = useState("ideas");
   const [currentUser, setCurrentUser] = useState(() => localStorage.getItem("idealmente_username") || "");
   const [loaded, setLoaded] = useState(false);
   const [editingName, setEditingName] = useState(false);
   const [tempName, setTempName] = useState("");
+
+  // ALL hooks must be called unconditionally before any early return
+  useEffect(() => {
+    if (!currentUser) return;
+    setLoaded(false);
+    const unsub = subscribeIdeas(data => {
+      setIdeas(data);
+      setLoaded(true);
+    });
+    return () => unsub();
+  }, [currentUser]);
 
   const handleEnterName = (name) => {
     localStorage.setItem("idealmente_username", name);
     setCurrentUser(name);
   };
 
-  // Show onboarding if no name set
+  // Show onboarding AFTER all hooks
   if (!currentUser) {
     return (
       <>
@@ -2008,15 +2029,6 @@ export default function App() {
       </>
     );
   }
-
-  useEffect(() => {
-    setLoaded(false);
-    const unsub = subscribeIdeas(data => {
-      setIdeas(data);
-      setLoaded(true);
-    });
-    return () => unsub();
-  }, []);
 
   const createIdea = async (idea) => {
     await saveIdea(idea);
@@ -2054,7 +2066,7 @@ export default function App() {
           <div className="topbar-logo">Idealmente</div>
           <div className="topbar-spacer" />
           {/* NAV IN TOPBAR */}
-          <div style={{ display: "flex", gap: 4 }}>
+          <div className="topbar-nav" style={{ display: "flex", gap: 4 }}>
             {[
               ["ideas", "💡", "Idee"],
               ["meetings", "📅", "Meeting"],
