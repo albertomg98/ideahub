@@ -48,28 +48,16 @@ const STYLE = `
   }
 
   /* ── FUTURISTIC BACKGROUND ── */
-  body::before {
-    content: '';
-    position: fixed;
-    inset: 0;
-    z-index: 0;
+  body {
+    background-color: #080b12;
     background-image:
-      linear-gradient(rgba(108,99,255,0.04) 1px, transparent 1px),
-      linear-gradient(90deg, rgba(108,99,255,0.04) 1px, transparent 1px);
-    background-size: 56px 56px;
-    pointer-events: none;
+      radial-gradient(ellipse 70% 50% at 5% 0%, rgba(108,99,255,0.08) 0%, transparent 60%),
+      radial-gradient(ellipse 50% 40% at 95% 100%, rgba(67,217,173,0.05) 0%, transparent 55%),
+      linear-gradient(rgba(108,99,255,0.035) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(108,99,255,0.035) 1px, transparent 1px);
+    background-size: 100% 100%, 100% 100%, 56px 56px, 56px 56px;
+    background-attachment: fixed;
   }
-  body::after {
-    content: '';
-    position: fixed;
-    inset: 0;
-    z-index: 0;
-    background:
-      radial-gradient(ellipse 70% 50% at 5% 0%, rgba(108,99,255,0.09) 0%, transparent 60%),
-      radial-gradient(ellipse 50% 40% at 95% 100%, rgba(67,217,173,0.06) 0%, transparent 55%);
-    pointer-events: none;
-  }
-  #root { position: relative; z-index: 1; }
 
   ::-webkit-scrollbar { width: 6px; }
   ::-webkit-scrollbar-track { background: var(--surface); }
