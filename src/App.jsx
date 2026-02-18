@@ -9,6 +9,9 @@ import {
   signOut,
   onAuthStateChanged,
   updateProfile,
+  updatePassword,
+  reauthenticateWithCredential,
+  EmailAuthProvider,
 } from "firebase/auth";
 
 // ─── Palette & fonts loaded via @import in style tag below ───────────────────
@@ -1956,38 +1959,27 @@ function MeetingsPage({ onHome }) {
 // ─── AUTH SCREEN ─────────────────────────────────────────────────────────────
 
 function AuthScreen({ onAuth }) {
-  const [mode, setMode] = useState("login"); // "login" | "register"
-  const [displayName, setDisplayName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
 
-  const handleSubmit = async () => {
+  const handleLogin = async () => {
     setError("");
     if (!email.trim() || !password.trim()) return;
-    if (mode === "register" && !displayName.trim()) return;
     setLoading(true);
     try {
-      if (mode === "register") {
-        const cred = await createUserWithEmailAndPassword(auth, email.trim(), password);
-        await updateProfile(cred.user, { displayName: displayName.trim() });
-        onAuth(cred.user);
-      } else {
-        const cred = await signInWithEmailAndPassword(auth, email.trim(), password);
-        onAuth(cred.user);
-      }
+      const cred = await signInWithEmailAndPassword(auth, email.trim(), password);
+      onAuth(cred.user);
     } catch (e) {
       const msgs = {
-        "auth/email-already-in-use": "Email già registrata.",
-        "auth/invalid-email": "Email non valida.",
-        "auth/weak-password": "Password troppo debole (min. 6 caratteri).",
         "auth/user-not-found": "Nessun account con questa email.",
         "auth/wrong-password": "Password errata.",
         "auth/invalid-credential": "Email o password errati.",
+        "auth/invalid-email": "Email non valida.",
         "auth/too-many-requests": "Troppi tentativi. Riprova tra qualche minuto.",
       };
-      setError(msgs[e.code] || "Errore: " + e.message);
+      setError(msgs[e.code] || "Errore di accesso. Riprova.");
     } finally {
       setLoading(false);
     }
@@ -2004,7 +1996,7 @@ function AuthScreen({ onAuth }) {
         boxShadow: "0 24px 80px rgba(0,0,0,0.4)",
       }}>
         {/* Logo */}
-        <div style={{ textAlign: "center", marginBottom: 28 }}>
+        <div style={{ textAlign: "center", marginBottom: 32 }}>
           <div style={{
             width: 56, height: 56, borderRadius: 18, margin: "0 auto 16px",
             background: "linear-gradient(135deg, var(--accent), var(--accent3))",
@@ -2014,37 +2006,37 @@ function AuthScreen({ onAuth }) {
           <p style={{ color: "var(--text3)", fontSize: 13 }}>Business Intelligence Collective</p>
         </div>
 
-        {/* Mode toggle */}
-        <div style={{ display: "flex", background: "var(--surface2)", borderRadius: 10, padding: 4, marginBottom: 24 }}>
-          {[["login", "Accedi"], ["register", "Registrati"]].map(([m, l]) => (
-            <button key={m} onClick={() => { setMode(m); setError(""); }} style={{
-              flex: 1, padding: "8px", borderRadius: 8, border: "none", cursor: "pointer",
-              fontFamily: "'DM Sans', sans-serif", fontSize: 14, fontWeight: 500,
-              background: mode === m ? "var(--surface3)" : "transparent",
-              color: mode === m ? "var(--text)" : "var(--text2)",
-              transition: "all 0.15s",
-            }}>{l}</button>
-          ))}
+        {/* Invite-only badge */}
+        <div style={{
+          background: "var(--accent)15", border: "1px solid var(--accent)33",
+          borderRadius: 10, padding: "10px 14px", marginBottom: 24,
+          display: "flex", alignItems: "center", gap: 8,
+        }}>
+          <span style={{ fontSize: 16 }}>🔒</span>
+          <div>
+            <div style={{ fontSize: 12, fontWeight: 600, color: "var(--accent)", marginBottom: 2 }}>Accesso solo su invito</div>
+            <div style={{ fontSize: 11, color: "var(--text3)" }}>Contatta Alberto per ricevere le credenziali.</div>
+          </div>
         </div>
 
         {/* Fields */}
-        {mode === "register" && (
-          <div className="form-group">
-            <label className="form-label">Nome visualizzato</label>
-            <input className="form-input" value={displayName} onChange={e => setDisplayName(e.target.value)}
-              placeholder="Es. Marco Rossi" autoFocus />
-          </div>
-        )}
         <div className="form-group">
           <label className="form-label">Email</label>
-          <input className="form-input" type="email" value={email} onChange={e => setEmail(e.target.value)}
-            placeholder="mario@email.com" autoFocus={mode === "login"}
-            onKeyDown={e => e.key === "Enter" && handleSubmit()} />
+          <input
+            className="form-input" type="email" value={email}
+            onChange={e => setEmail(e.target.value)}
+            placeholder="mario@email.com" autoFocus
+            onKeyDown={e => e.key === "Enter" && handleLogin()}
+          />
         </div>
         <div className="form-group">
           <label className="form-label">Password</label>
-          <input className="form-input" type="password" value={password} onChange={e => setPassword(e.target.value)}
-            placeholder="••••••••" onKeyDown={e => e.key === "Enter" && handleSubmit()} />
+          <input
+            className="form-input" type="password" value={password}
+            onChange={e => setPassword(e.target.value)}
+            placeholder="••••••••"
+            onKeyDown={e => e.key === "Enter" && handleLogin()}
+          />
         </div>
 
         {error && (
@@ -2057,16 +2049,91 @@ function AuthScreen({ onAuth }) {
         <button
           className="btn btn-primary"
           style={{ width: "100%", justifyContent: "center", padding: "12px", fontSize: 15, marginTop: 4 }}
-          onClick={handleSubmit}
-          disabled={loading || !email.trim() || !password.trim() || (mode === "register" && !displayName.trim())}
+          onClick={handleLogin}
+          disabled={loading || !email.trim() || !password.trim()}
         >
-          {loading ? "⏳ Attendere..." : mode === "login" ? "Accedi →" : "Crea account →"}
+          {loading ? "⏳ Accesso in corso..." : "Accedi →"}
         </button>
+      </div>
+    </div>
+  );
+}
 
-        {mode === "register" && (
-          <p style={{ color: "var(--text3)", fontSize: 11, textAlign: "center", marginTop: 16, lineHeight: 1.6 }}>
-            Registrandoti accetti di usare questa piattaforma in modo responsabile.
-          </p>
+// ─── CHANGE PASSWORD MODAL ────────────────────────────────────────────────────
+
+function ChangePwdModal({ user, onClose }) {
+  const [currentPwd, setCurrentPwd] = useState("");
+  const [newPwd, setNewPwd] = useState("");
+  const [confirmPwd, setConfirmPwd] = useState("");
+  const [error, setError] = useState("");
+  const [success, setSuccess] = useState(false);
+  const [loading, setLoading] = useState(false);
+
+  const handleChange = async () => {
+    setError("");
+    if (!currentPwd || !newPwd || !confirmPwd) { setError("Compila tutti i campi."); return; }
+    if (newPwd.length < 6) { setError("La nuova password deve avere almeno 6 caratteri."); return; }
+    if (newPwd !== confirmPwd) { setError("Le password non coincidono."); return; }
+    setLoading(true);
+    try {
+      const credential = EmailAuthProvider.credential(user.email, currentPwd);
+      await reauthenticateWithCredential(user, credential);
+      await updatePassword(user, newPwd);
+      setSuccess(true);
+      setTimeout(() => onClose(), 2000);
+    } catch (e) {
+      const msgs = {
+        "auth/wrong-password": "Password attuale errata.",
+        "auth/invalid-credential": "Password attuale errata.",
+        "auth/too-many-requests": "Troppi tentativi. Riprova tra qualche minuto.",
+        "auth/weak-password": "Password troppo debole (min. 6 caratteri).",
+      };
+      setError(msgs[e.code] || "Errore. Riprova.");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  return (
+    <div className="modal-overlay" onClick={e => e.target === e.currentTarget && onClose()}>
+      <div className="modal">
+        <h3>🔑 Cambia Password</h3>
+        {success ? (
+          <div style={{ textAlign: "center", padding: "20px 0" }}>
+            <div style={{ fontSize: 40, marginBottom: 12 }}>✅</div>
+            <p style={{ color: "var(--accent3)", fontWeight: 600 }}>Password aggiornata!</p>
+          </div>
+        ) : (
+          <>
+            <div className="form-group">
+              <label className="form-label">Password attuale</label>
+              <input className="form-input" type="password" value={currentPwd}
+                onChange={e => setCurrentPwd(e.target.value)} placeholder="••••••••" autoFocus />
+            </div>
+            <div className="form-group">
+              <label className="form-label">Nuova password</label>
+              <input className="form-input" type="password" value={newPwd}
+                onChange={e => setNewPwd(e.target.value)} placeholder="Min. 6 caratteri" />
+            </div>
+            <div className="form-group">
+              <label className="form-label">Conferma nuova password</label>
+              <input className="form-input" type="password" value={confirmPwd}
+                onChange={e => setConfirmPwd(e.target.value)} placeholder="Ripeti la nuova password"
+                onKeyDown={e => e.key === "Enter" && handleChange()} />
+            </div>
+            {error && (
+              <div style={{
+                background: "#ff6b6b18", border: "1px solid #ff6b6b44", borderRadius: 8,
+                padding: "10px 14px", marginBottom: 16, fontSize: 13, color: "#ff6b6b",
+              }}>{error}</div>
+            )}
+            <div className="modal-footer">
+              <button className="btn btn-ghost" onClick={onClose}>Annulla</button>
+              <button className="btn btn-primary" onClick={handleChange} disabled={loading}>
+                {loading ? "⏳ Salvataggio..." : "Salva"}
+              </button>
+            </div>
+          </>
         )}
       </div>
     </div>
@@ -2083,6 +2150,7 @@ export default function App() {
   const [page, setPage] = useState("ideas");
   const [loaded, setLoaded] = useState(false);
   const [showUserMenu, setShowUserMenu] = useState(false);
+  const [showChangePwd, setShowChangePwd] = useState(false);
 
   // Listen to Firebase auth state
   useEffect(() => {
@@ -2208,12 +2276,24 @@ export default function App() {
               <div style={{
                 position: "absolute", right: 0, top: "calc(100% + 8px)",
                 background: "var(--surface)", border: "1px solid var(--border)",
-                borderRadius: "var(--radius)", padding: 8, minWidth: 180,
+                borderRadius: "var(--radius)", padding: 8, minWidth: 200,
                 boxShadow: "0 8px 32px rgba(0,0,0,0.3)", zIndex: 100,
               }}>
                 <div style={{ padding: "8px 12px", fontSize: 12, color: "var(--text3)", borderBottom: "1px solid var(--border)", marginBottom: 4 }}>
                   {user.email}
                 </div>
+                <button
+                  onClick={() => { setShowChangePwd(true); setShowUserMenu(false); }}
+                  style={{
+                    width: "100%", textAlign: "left", background: "none", border: "none",
+                    padding: "8px 12px", fontSize: 13, color: "var(--text2)", cursor: "pointer",
+                    borderRadius: 6, fontFamily: "'DM Sans', sans-serif",
+                  }}
+                  onMouseEnter={e => e.target.style.background = "var(--surface2)"}
+                  onMouseLeave={e => e.target.style.background = "none"}
+                >
+                  🔑 Cambia password
+                </button>
                 <button
                   onClick={handleLogout}
                   style={{
@@ -2291,6 +2371,7 @@ export default function App() {
       </div>
 
       {showNew && <NewIdeaModal onClose={() => setShowNew(false)} onCreate={createIdea} currentUser={currentUser} />}
+      {showChangePwd && <ChangePwdModal user={user} onClose={() => setShowChangePwd(false)} />}
     </>
   );
 }
