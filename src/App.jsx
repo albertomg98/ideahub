@@ -22,7 +22,7 @@ const STYLE = `
     --radius-lg: 20px;
   }
 
-  html, body, #root { height: 100%; }
+  html, body, #root { height: 100%; width: 100%; }
 
   body {
     background: var(--bg);
@@ -45,6 +45,37 @@ const STYLE = `
     grid-template-rows: 56px 1fr;
     height: 100vh;
     overflow: hidden;
+  }
+
+  /* ── MOBILE ── */
+  @media (max-width: 768px) {
+    .app {
+      grid-template-columns: 1fr;
+      grid-template-rows: 56px auto 1fr;
+    }
+    .sidebar {
+      grid-column: 1;
+      grid-row: 2;
+      border-right: none;
+      border-bottom: 1px solid var(--border);
+      flex-direction: row;
+      overflow-x: auto;
+      overflow-y: hidden;
+      height: auto;
+      max-height: 140px;
+    }
+    .sidebar-section { border-bottom: none; border-right: 1px solid var(--border); padding: 10px; flex-shrink: 0; }
+    .ideas-list { display: flex; flex-direction: row; gap: 6px; padding: 8px; overflow-x: auto; overflow-y: hidden; }
+    .idea-item { min-width: 160px; margin-bottom: 0; }
+    .main { grid-column: 1; grid-row: 3; }
+    .idea-detail { padding: 16px; }
+    .detail-header { flex-wrap: wrap; }
+    .detail-actions { width: 100%; }
+    .swot-grid { grid-template-columns: 1fr; }
+    .score-grid { grid-template-columns: repeat(2, 1fr); }
+    .topbar-sub { display: none; }
+    .modal { width: 95vw; padding: 20px; }
+    .form-row { flex-direction: column; }
   }
 
   /* ── TOPBAR ── */
@@ -1448,11 +1479,14 @@ function MeetingsPage() {
 
 function OnboardingScreen({ onEnter }) {
   const [name, setName] = useState("");
+  const [submitting, setSubmitting] = useState(false);
 
   const handleEnter = () => {
     const trimmed = name.trim();
-    if (!trimmed) return;
-    onEnter(trimmed);
+    if (!trimmed || submitting) return;
+    setSubmitting(true);
+    // Small delay ensures React flushes state before parent re-renders
+    setTimeout(() => onEnter(trimmed), 50);
   };
 
   return (
@@ -1490,9 +1524,9 @@ function OnboardingScreen({ onEnter }) {
           className="btn btn-primary"
           style={{ width: "100%", justifyContent: "center", padding: "12px", fontSize: 15 }}
           onClick={handleEnter}
-          disabled={!name.trim()}
+          disabled={!name.trim() || submitting}
         >
-          Entra →
+          {submitting ? "Caricamento..." : "Entra →"}
         </button>
       </div>
       <p style={{ color: "var(--text3)", fontSize: 12, marginTop: 20 }}>
