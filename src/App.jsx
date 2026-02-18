@@ -1338,6 +1338,201 @@ function IdeaDetail({ idea, currentUser, onUpdate, onDelete }) {
   );
 }
 
+// ─── REPORTS ─────────────────────────────────────────────────────────────────
+
+function subscribeReports(callback) {
+  const q = query(collection(db, "reports"), orderBy("uploadedAt", "desc"));
+  return onSnapshot(q, snap => {
+    callback(snap.docs.map(d => ({ id: d.id, ...d.data() })));
+  });
+}
+
+async function saveReport(report) {
+  await setDoc(doc(db, "reports", report.id), report);
+}
+
+async function removeReport(id) {
+  await deleteDoc(doc(db, "reports", id));
+}
+
+function ReportsPage({ currentUser }) {
+  const [reports, setReports] = useState([]);
+  const [uploading, setUploading] = useState(false);
+  const fileRef = useRef();
+
+  useEffect(() => {
+    const unsub = subscribeReports(setReports);
+    return () => unsub();
+  }, []);
+
+  const handleFile = async (f) => {
+    if (!f) return;
+    setUploading(true);
+    const reader = new FileReader();
+    reader.onload = async (e) => {
+      const report = {
+        id: Date.now().toString(),
+        name: f.name,
+        size: f.size,
+        type: f.type,
+        content: e.target.result,
+        uploadedBy: currentUser,
+        uploadedAt: Date.now(),
+      };
+      await saveReport(report);
+      setUploading(false);
+    };
+    reader.readAsDataURL(f);
+  };
+
+  const downloadReport = (report) => {
+    const a = document.createElement("a");
+    a.href = report.content;
+    a.download = report.name;
+    a.click();
+  };
+
+  const formatSize = (bytes) => {
+    if (bytes < 1024) return `${bytes} B`;
+    if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
+    return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
+  };
+
+  const getFileIcon = (name) => {
+    const ext = name.split(".").pop().toLowerCase();
+    if (["pdf"].includes(ext)) return "📄";
+    if (["doc", "docx"].includes(ext)) return "📝";
+    if (["xls", "xlsx"].includes(ext)) return "📊";
+    if (["ppt", "pptx"].includes(ext)) return "📋";
+    if (["png", "jpg", "jpeg", "gif"].includes(ext)) return "🖼️";
+    return "📎";
+  };
+
+  return (
+    <div style={{ padding: 32, maxWidth: 860, margin: "0 auto" }}>
+      <div style={{ display: "flex", alignItems: "center", marginBottom: 28 }}>
+        <div>
+          <h2 style={{ fontSize: 22, marginBottom: 4 }}>📁 Report</h2>
+          <p style={{ color: "var(--text2)", fontSize: 14 }}>Carica e condividi documenti con il tuo team</p>
+        </div>
+        <button
+          className="btn btn-primary"
+          style={{ marginLeft: "auto" }}
+          onClick={() => fileRef.current?.click()}
+          disabled={uploading}
+        >
+          {uploading ? "⏳ Caricamento..." : "⬆️ Carica Report"}
+        </button>
+        <input
+          ref={fileRef} type="file" style={{ display: "none" }}
+          accept=".pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx,.txt,.md,.png,.jpg,.jpeg"
+          onChange={e => handleFile(e.target.files[0])}
+        />
+      </div>
+
+      {reports.length === 0 && !uploading && (
+        <div style={{ textAlign: "center", padding: "60px 0" }}>
+          <div style={{ fontSize: 56, marginBottom: 16 }}>📁</div>
+          <h3 style={{ color: "var(--text2)", marginBottom: 8 }}>Nessun report ancora</h3>
+          <p style={{ color: "var(--text3)", marginBottom: 24, fontSize: 14 }}>Carica documenti che il tuo team potrà scaricare.</p>
+          <button className="btn btn-primary" onClick={() => fileRef.current?.click()}>⬆️ Carica il primo report</button>
+        </div>
+      )}
+
+      <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+        {reports.map(r => (
+          <div key={r.id} style={{
+            background: "var(--surface)", border: "1px solid var(--border)",
+            borderRadius: "var(--radius)", padding: "16px 20px",
+            display: "flex", alignItems: "center", gap: 16,
+            transition: "border-color 0.15s",
+          }}
+            onMouseEnter={e => e.currentTarget.style.borderColor = "var(--accent)"}
+            onMouseLeave={e => e.currentTarget.style.borderColor = "var(--border)"}
+          >
+            <div style={{ fontSize: 28, flexShrink: 0 }}>{getFileIcon(r.name)}</div>
+            <div style={{ flex: 1, minWidth: 0 }}>
+              <div style={{ fontWeight: 600, fontSize: 14, marginBottom: 4, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{r.name}</div>
+              <div style={{ fontSize: 12, color: "var(--text3)", display: "flex", gap: 12 }}>
+                <span>👤 {r.uploadedBy}</span>
+                <span>📅 {formatDate(r.uploadedAt)}</span>
+                <span>💾 {formatSize(r.size)}</span>
+              </div>
+            </div>
+            <div style={{ display: "flex", gap: 8, flexShrink: 0 }}>
+              <button className="btn btn-success btn-sm" onClick={() => downloadReport(r)}>⬇️ Scarica</button>
+              {r.uploadedBy === currentUser && (
+                <button className="btn btn-danger btn-sm" onClick={() => removeReport(r.id)}>✕</button>
+              )}
+            </div>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+// ─── EDIT MEETING MODAL ───────────────────────────────────────────────────────
+
+function EditMeetingModal({ meeting, onClose, onSave }) {
+  const [title, setTitle] = useState(meeting.title);
+  const [date, setDate] = useState(meeting.date);
+  const [time, setTime] = useState(meeting.time);
+  const [duration, setDuration] = useState(meeting.duration);
+  const [notes, setNotes] = useState(meeting.notes || "");
+  const [participants, setParticipants] = useState((meeting.participants || []).join(", "));
+
+  const handleSave = () => {
+    if (!title.trim() || !date) return;
+    onSave({
+      ...meeting,
+      title: title.trim(), date, time,
+      duration: parseInt(duration),
+      notes: notes.trim(),
+      participants: participants.split(",").map(e => e.trim()).filter(Boolean),
+    });
+    onClose();
+  };
+
+  return (
+    <div className="modal-overlay" onClick={e => e.target === e.currentTarget && onClose()}>
+      <div className="modal">
+        <h3>✏️ Modifica Meeting</h3>
+        <div className="form-group">
+          <label className="form-label">Titolo *</label>
+          <input className="form-input" value={title} onChange={e => setTitle(e.target.value)} />
+        </div>
+        <div className="form-row">
+          <div className="form-group">
+            <label className="form-label">Data *</label>
+            <input className="form-input" type="date" value={date} onChange={e => setDate(e.target.value)} />
+          </div>
+          <div className="form-group">
+            <label className="form-label">Ora</label>
+            <input className="form-input" type="time" value={time} onChange={e => setTime(e.target.value)} />
+          </div>
+          <div className="form-group">
+            <label className="form-label">Durata (min)</label>
+            <input className="form-input" type="number" value={duration} onChange={e => setDuration(e.target.value)} min={15} step={15} />
+          </div>
+        </div>
+        <div className="form-group">
+          <label className="form-label">Partecipanti (email separate da virgola)</label>
+          <input className="form-input" value={participants} onChange={e => setParticipants(e.target.value)} placeholder="marco@email.com, giulia@email.com" />
+        </div>
+        <div className="form-group">
+          <label className="form-label">Note / Agenda</label>
+          <textarea className="form-input" rows={3} value={notes} onChange={e => setNotes(e.target.value)} style={{ resize: "none" }} />
+        </div>
+        <div className="modal-footer">
+          <button className="btn btn-ghost" onClick={onClose}>Annulla</button>
+          <button className="btn btn-primary" onClick={handleSave} disabled={!title.trim() || !date}>Salva</button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 // ─── HOME PAGE ───────────────────────────────────────────────────────────────
 
 function HomePage({ ideas, onSelect, onNew, getIdeaScore }) {
@@ -1523,6 +1718,7 @@ function NewMeetingModal({ onClose, onCreate }) {
 function MeetingsPage() {
   const [meetings, setMeetings] = useState([]);
   const [showNew, setShowNew] = useState(false);
+  const [editingMeeting, setEditingMeeting] = useState(null);
   const minutesRefs = useRef({});
 
   useEffect(() => {
@@ -1532,6 +1728,7 @@ function MeetingsPage() {
 
   const createMeeting = async (m) => { await saveMeeting(m); };
   const deleteMeeting = async (id) => { await removeMeeting(id); };
+  const updateMeeting = async (m) => { await saveMeeting(m); };
 
   const addMinutes = async (id, text, fileName) => {
     const m = meetings.find(x => x.id === id);
@@ -1609,6 +1806,7 @@ function MeetingsPage() {
           <div style={{ display: "flex", gap: 8, flexShrink: 0 }}>
             <a className="cal-btn" href={googleCalendarUrl(nextMeeting)} target="_blank" rel="noreferrer">📅 Google</a>
             <a className="cal-btn" href={outlookCalendarUrl(nextMeeting)} target="_blank" rel="noreferrer">📆 Outlook</a>
+            <button className="btn btn-ghost btn-sm" onClick={() => setEditingMeeting(nextMeeting)}>✏️</button>
             <button className="btn btn-danger btn-sm" onClick={() => deleteMeeting(nextMeeting.id)}>✕</button>
           </div>
         </div>
@@ -1643,6 +1841,7 @@ function MeetingsPage() {
               <div className="meeting-actions">
                 <a className="cal-btn" href={googleCalendarUrl(m)} target="_blank" rel="noreferrer">📅</a>
                 <a className="cal-btn" href={outlookCalendarUrl(m)} target="_blank" rel="noreferrer">📆</a>
+                <button className="btn btn-ghost btn-sm" onClick={() => setEditingMeeting(m)}>✏️</button>
                 <button className="btn btn-danger btn-sm" onClick={() => deleteMeeting(m.id)}>✕</button>
               </div>
             </div>
@@ -1669,6 +1868,7 @@ function MeetingsPage() {
                     {m.participants?.length > 0 && <span>👥 {m.participants.map(p => p.split("@")[0]).join(", ")}</span>}
                   </div>
                 </div>
+                <button className="btn btn-ghost btn-sm" onClick={() => setEditingMeeting(m)}>✏️</button>
                 <button className="btn btn-danger btn-sm" style={{ marginLeft: "auto", flexShrink: 0 }} onClick={() => deleteMeeting(m.id)}>✕</button>
               </div>
               {/* Notes */}
@@ -1716,6 +1916,7 @@ function MeetingsPage() {
       )}
 
       {showNew && <NewMeetingModal onClose={() => setShowNew(false)} onCreate={createMeeting} />}
+      {editingMeeting && <EditMeetingModal meeting={editingMeeting} onClose={() => setEditingMeeting(null)} onSave={updateMeeting} />}
     </div>
   );
 }
@@ -1851,7 +2052,30 @@ export default function App() {
         {/* TOPBAR */}
         <div className="topbar">
           <div className="topbar-logo">Idealmente</div>
-          <div className="topbar-sub">Business Intelligence Collective</div>
+          <div className="topbar-spacer" />
+          {/* NAV IN TOPBAR */}
+          <div style={{ display: "flex", gap: 4 }}>
+            {[
+              ["ideas", "💡", "Idee"],
+              ["meetings", "📅", "Meeting"],
+              ["reports", "📁", "Report"],
+            ].map(([key, icon, label]) => (
+              <button
+                key={key}
+                onClick={() => { setPage(key); if (key === "ideas") setSelectedId(null); }}
+                style={{
+                  background: page === key ? "var(--surface3)" : "transparent",
+                  border: page === key ? "1px solid var(--border)" : "1px solid transparent",
+                  borderRadius: 8, padding: "6px 14px",
+                  color: page === key ? "var(--text)" : "var(--text2)",
+                  fontSize: 13, fontWeight: 500, cursor: "pointer",
+                  fontFamily: "'DM Sans', sans-serif",
+                  display: "flex", alignItems: "center", gap: 6,
+                  transition: "all 0.15s",
+                }}
+              >{icon} {label}</button>
+            ))}
+          </div>
           <div className="topbar-spacer" />
           <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
             {editingName ? (
@@ -1903,32 +2127,6 @@ export default function App() {
               ➕ Nuova Idea
             </button>
           </div>
-          <div className="sidebar-section" style={{ paddingBottom: 8 }}>
-            <div
-              onClick={() => { setPage("ideas"); setSelectedId(null); }}
-              style={{
-                display: "flex", alignItems: "center", gap: 8, padding: "8px 10px",
-                borderRadius: "var(--radius)", cursor: "pointer", marginBottom: 4,
-                background: page === "ideas" ? "var(--surface2)" : "transparent",
-                color: page === "ideas" ? "var(--text)" : "var(--text2)",
-                fontSize: 14, fontWeight: 500,
-              }}
-            >
-              💡 <span>Idee ({ideas.length})</span>
-            </div>
-            <div
-              onClick={() => setPage("meetings")}
-              style={{
-                display: "flex", alignItems: "center", gap: 8, padding: "8px 10px",
-                borderRadius: "var(--radius)", cursor: "pointer",
-                background: page === "meetings" ? "var(--surface2)" : "transparent",
-                color: page === "meetings" ? "var(--text)" : "var(--text2)",
-                fontSize: 14, fontWeight: 500,
-              }}
-            >
-              📅 <span>Meeting</span>
-            </div>
-          </div>
           {page === "ideas" && (
           <div className="ideas-list">
             {!loaded && <div style={{ color: "var(--text3)", fontSize: 13, textAlign: "center", padding: 20 }}>Caricamento...</div>}
@@ -1963,6 +2161,8 @@ export default function App() {
         <div className="main">
           {page === "meetings" ? (
             <MeetingsPage />
+          ) : page === "reports" ? (
+            <ReportsPage currentUser={currentUser} />
           ) : selectedId && selected ? (
             <IdeaDetail
               key={selected.id}
