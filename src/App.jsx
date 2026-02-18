@@ -1452,7 +1452,6 @@ function OnboardingScreen({ onEnter }) {
   const handleEnter = () => {
     const trimmed = name.trim();
     if (!trimmed) return;
-    localStorage.setItem("idealmente_username", trimmed);
     onEnter(trimmed);
   };
 
@@ -1515,12 +1514,17 @@ export default function App() {
   const [editingName, setEditingName] = useState(false);
   const [tempName, setTempName] = useState("");
 
+  const handleEnterName = (name) => {
+    localStorage.setItem("idealmente_username", name);
+    setCurrentUser(name);
+  };
+
   // Show onboarding if no name set
   if (!currentUser) {
     return (
       <>
         <style>{STYLE}</style>
-        <OnboardingScreen onEnter={name => setCurrentUser(name)} />
+        <OnboardingScreen onEnter={handleEnterName} />
       </>
     );
   }
