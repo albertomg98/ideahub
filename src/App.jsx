@@ -578,7 +578,42 @@ const STYLE = `
   .criteria-label { width: 140px; font-size: 13px; color: var(--text2); flex-shrink: 0; }
   .criteria-val { width: 32px; font-size: 13px; font-weight: 600; text-align: right; flex-shrink: 0; }
 
-  input[type="range"] {
+  /* ── MEETINGS ── */
+  .meeting-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 16px 20px;
+    margin-bottom: 10px;
+    display: flex; align-items: center; gap: 16px;
+    transition: border-color 0.15s;
+  }
+  .meeting-card:hover { border-color: var(--accent); }
+  .meeting-date-box {
+    width: 52px; height: 52px; border-radius: 12px;
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    display: flex; flex-direction: column; align-items: center; justify-content: center;
+    flex-shrink: 0;
+  }
+  .meeting-date-box .day { font-family: 'Syne', sans-serif; font-size: 20px; font-weight: 800; line-height: 1; }
+  .meeting-date-box .month { font-size: 10px; color: var(--text3); text-transform: uppercase; letter-spacing: 0.5px; }
+  .meeting-info { flex: 1; }
+  .meeting-title { font-size: 15px; font-weight: 600; margin-bottom: 4px; }
+  .meeting-meta { font-size: 12px; color: var(--text2); display: flex; gap: 12px; }
+  .meeting-actions { display: flex; gap: 8px; flex-shrink: 0; }
+  .meeting-past { opacity: 0.55; }
+  .cal-btn {
+    display: inline-flex; align-items: center; gap: 5px;
+    padding: 5px 12px; border-radius: 8px;
+    font-size: 12px; font-weight: 500; cursor: pointer;
+    border: 1px solid var(--border);
+    background: var(--surface2); color: var(--text2);
+    transition: all 0.15s; text-decoration: none;
+  }
+  .cal-btn:hover { border-color: var(--accent); color: var(--accent); }
+
+
     -webkit-appearance: none;
     width: 100%;
     height: 6px;
@@ -634,7 +669,7 @@ const CRITERIA = [
   { key: "competition", label: "Competition", color: "#a78bfa" },
 ];
 
-const DEMO_USERS = ["Marco", "Giulia", "Luca", "Sofia", "Andrea", "Elena", "Riccardo"];
+// no demo users — name is freely entered by each user
 
 const COMMENT_TAGS = [
   { key: "pro", label: "✅ Pro", cls: "tag-pro" },
@@ -1251,14 +1286,244 @@ function IdeaDetail({ idea, currentUser, onUpdate, onDelete }) {
   );
 }
 
+// ─── MEETINGS ────────────────────────────────────────────────────────────────
+
+async function loadMeetings() {
+  try {
+    const r = await window.storage.get("meetings_v1");
+    return r ? JSON.parse(r.value) : [];
+  } catch { return []; }
+}
+
+async function saveMeetings(meetings) {
+  try { await window.storage.set("meetings_v1", JSON.stringify(meetings)); } catch {}
+}
+
+function googleCalendarUrl({ title, date, time, duration, notes }) {
+  const dt = new Date(`${date}T${time || "10:00"}`);
+  const end = new Date(dt.getTime() + (duration || 60) * 60000);
+  const fmt = d => d.toISOString().replace(/[-:]/g, "").split(".")[0] + "Z";
+  return `https://calendar.google.com/calendar/render?action=TEMPLATE&text=${encodeURIComponent(title)}&dates=${fmt(dt)}/${fmt(end)}&details=${encodeURIComponent(notes || "")}`;
+}
+
+function outlookCalendarUrl({ title, date, time, duration, notes }) {
+  const dt = new Date(`${date}T${time || "10:00"}`);
+  const end = new Date(dt.getTime() + (duration || 60) * 60000);
+  return `https://outlook.live.com/calendar/0/deeplink/compose?subject=${encodeURIComponent(title)}&startdt=${dt.toISOString()}&enddt=${end.toISOString()}&body=${encodeURIComponent(notes || "")}`;
+}
+
+function NewMeetingModal({ onClose, onCreate }) {
+  const [title, setTitle] = useState("");
+  const [date, setDate] = useState("");
+  const [time, setTime] = useState("10:00");
+  const [duration, setDuration] = useState(60);
+  const [notes, setNotes] = useState("");
+
+  const handleCreate = () => {
+    if (!title.trim() || !date) return;
+    onCreate({ id: Date.now().toString(), title: title.trim(), date, time, duration: parseInt(duration), notes: notes.trim(), createdAt: Date.now() });
+    onClose();
+  };
+
+  return (
+    <div className="modal-overlay" onClick={e => e.target === e.currentTarget && onClose()}>
+      <div className="modal">
+        <h3>📅 Nuovo Meeting</h3>
+        <div className="form-group">
+          <label className="form-label">Titolo *</label>
+          <input className="form-input" value={title} onChange={e => setTitle(e.target.value)} placeholder="Es. Review Q1 — Idee Business" />
+        </div>
+        <div className="form-row">
+          <div className="form-group">
+            <label className="form-label">Data *</label>
+            <input className="form-input" type="date" value={date} onChange={e => setDate(e.target.value)} />
+          </div>
+          <div className="form-group">
+            <label className="form-label">Ora</label>
+            <input className="form-input" type="time" value={time} onChange={e => setTime(e.target.value)} />
+          </div>
+          <div className="form-group">
+            <label className="form-label">Durata (min)</label>
+            <input className="form-input" type="number" value={duration} onChange={e => setDuration(e.target.value)} min={15} step={15} />
+          </div>
+        </div>
+        <div className="form-group">
+          <label className="form-label">Note / Agenda</label>
+          <textarea className="form-input" rows={3} value={notes} onChange={e => setNotes(e.target.value)} placeholder="Punti da discutere..." style={{ resize: "none" }} />
+        </div>
+        <div className="modal-footer">
+          <button className="btn btn-ghost" onClick={onClose}>Annulla</button>
+          <button className="btn btn-primary" onClick={handleCreate} disabled={!title.trim() || !date}>Crea Meeting</button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function MeetingsPage() {
+  const [meetings, setMeetings] = useState([]);
+  const [showNew, setShowNew] = useState(false);
+
+  useEffect(() => { loadMeetings().then(setMeetings); }, []);
+
+  const persistMeetings = (m) => { setMeetings(m); saveMeetings(m); };
+
+  const createMeeting = (m) => persistMeetings([...meetings, m].sort((a, b) => new Date(a.date) - new Date(b.date)));
+  const deleteMeeting = (id) => persistMeetings(meetings.filter(m => m.id !== id));
+
+  const today = new Date().toISOString().split("T")[0];
+  const upcoming = meetings.filter(m => m.date >= today);
+  const past = meetings.filter(m => m.date < today).reverse();
+
+  const MeetingCard = ({ m, isPast }) => {
+    const d = new Date(m.date + "T12:00:00");
+    const day = d.getDate();
+    const month = d.toLocaleDateString("it-IT", { month: "short" });
+    return (
+      <div className={`meeting-card ${isPast ? "meeting-past" : ""}`}>
+        <div className="meeting-date-box" style={!isPast ? { borderColor: "var(--accent)", background: "var(--accent)11" } : {}}>
+          <div className="day" style={!isPast ? { color: "var(--accent)" } : {}}>{day}</div>
+          <div className="month">{month}</div>
+        </div>
+        <div className="meeting-info">
+          <div className="meeting-title">{m.title}</div>
+          <div className="meeting-meta">
+            <span>🕐 {m.time}</span>
+            <span>⏱ {m.duration} min</span>
+            {m.notes && <span>📝 {m.notes.slice(0, 50)}{m.notes.length > 50 ? "…" : ""}</span>}
+          </div>
+        </div>
+        <div className="meeting-actions">
+          {!isPast && (
+            <>
+              <a className="cal-btn" href={googleCalendarUrl(m)} target="_blank" rel="noreferrer">📅 Google</a>
+              <a className="cal-btn" href={outlookCalendarUrl(m)} target="_blank" rel="noreferrer">📆 Outlook</a>
+            </>
+          )}
+          <button className="btn btn-danger btn-sm" onClick={() => deleteMeeting(m.id)}>✕</button>
+        </div>
+      </div>
+    );
+  };
+
+  return (
+    <div style={{ padding: 32, maxWidth: 800, margin: "0 auto" }}>
+      <div style={{ display: "flex", alignItems: "center", marginBottom: 28 }}>
+        <div>
+          <h2 style={{ fontSize: 22, marginBottom: 4 }}>📅 Meeting</h2>
+          <p style={{ color: "var(--text2)", fontSize: 14 }}>Pianifica sessioni di review con il tuo team</p>
+        </div>
+        <button className="btn btn-primary" style={{ marginLeft: "auto" }} onClick={() => setShowNew(true)}>
+          ➕ Nuovo Meeting
+        </button>
+      </div>
+
+      {upcoming.length === 0 && past.length === 0 && (
+        <div style={{ textAlign: "center", padding: "60px 0", color: "var(--text3)" }}>
+          <div style={{ fontSize: 48, marginBottom: 16 }}>📅</div>
+          <p>Nessun meeting pianificato ancora.</p>
+        </div>
+      )}
+
+      {upcoming.length > 0 && (
+        <div className="card">
+          <div className="card-title">🔜 Prossimi Meeting ({upcoming.length})</div>
+          {upcoming.map(m => <MeetingCard key={m.id} m={m} isPast={false} />)}
+        </div>
+      )}
+
+      {past.length > 0 && (
+        <div className="card">
+          <div className="card-title">🕘 Meeting Passati ({past.length})</div>
+          {past.map(m => <MeetingCard key={m.id} m={m} isPast={true} />)}
+        </div>
+      )}
+
+      {showNew && <NewMeetingModal onClose={() => setShowNew(false)} onCreate={createMeeting} />}
+    </div>
+  );
+}
+
+// ─── ONBOARDING ──────────────────────────────────────────────────────────────
+
+function OnboardingScreen({ onEnter }) {
+  const [name, setName] = useState("");
+
+  const handleEnter = () => {
+    const trimmed = name.trim();
+    if (!trimmed) return;
+    localStorage.setItem("idealmente_username", trimmed);
+    onEnter(trimmed);
+  };
+
+  return (
+    <div style={{
+      height: "100vh", display: "flex", alignItems: "center", justifyContent: "center",
+      background: "var(--bg)", flexDirection: "column", gap: 0,
+    }}>
+      <div style={{
+        background: "var(--surface)", border: "1px solid var(--border)",
+        borderRadius: "var(--radius-lg)", padding: "48px 40px", width: 420,
+        textAlign: "center", boxShadow: "0 24px 80px rgba(0,0,0,0.4)",
+      }}>
+        <div style={{
+          width: 64, height: 64, borderRadius: 20, margin: "0 auto 24px",
+          background: "linear-gradient(135deg, var(--accent), var(--accent3))",
+          display: "flex", alignItems: "center", justifyContent: "center", fontSize: 28,
+        }}>💡</div>
+        <h2 style={{ fontSize: 26, marginBottom: 8, fontFamily: "'Syne', sans-serif" }}>Idealmente</h2>
+        <p style={{ color: "var(--text2)", fontSize: 14, marginBottom: 32 }}>
+          Il tuo spazio collaborativo per valutare idee di business con il tuo team.
+        </p>
+        <div style={{ textAlign: "left", marginBottom: 20 }}>
+          <label className="form-label">Come ti chiami?</label>
+          <input
+            className="form-input"
+            value={name}
+            onChange={e => setName(e.target.value)}
+            onKeyDown={e => e.key === "Enter" && handleEnter()}
+            placeholder="Es. Marco Rossi"
+            autoFocus
+            style={{ fontSize: 15 }}
+          />
+        </div>
+        <button
+          className="btn btn-primary"
+          style={{ width: "100%", justifyContent: "center", padding: "12px", fontSize: 15 }}
+          onClick={handleEnter}
+          disabled={!name.trim()}
+        >
+          Entra →
+        </button>
+      </div>
+      <p style={{ color: "var(--text3)", fontSize: 12, marginTop: 20 }}>
+        Il nome viene salvato solo nel tuo browser
+      </p>
+    </div>
+  );
+}
+
 // ─── APP ─────────────────────────────────────────────────────────────────────
 
 export default function App() {
   const [ideas, setIdeas] = useState([]);
   const [selectedId, setSelectedId] = useState(null);
   const [showNew, setShowNew] = useState(false);
-  const [currentUser, setCurrentUser] = useState("Marco");
+  const [page, setPage] = useState("ideas"); // "ideas" | "meetings"
+  const [currentUser, setCurrentUser] = useState(() => localStorage.getItem("idealmente_username") || "");
   const [loaded, setLoaded] = useState(false);
+  const [editingName, setEditingName] = useState(false);
+  const [tempName, setTempName] = useState("");
+
+  // Show onboarding if no name set
+  if (!currentUser) {
+    return (
+      <>
+        <style>{STYLE}</style>
+        <OnboardingScreen onEnter={name => setCurrentUser(name)} />
+      </>
+    );
+  }
 
   useEffect(() => {
     loadIdeas().then(data => {
@@ -1307,18 +1572,46 @@ export default function App() {
       <div className="app">
         {/* TOPBAR */}
         <div className="topbar">
-          <div className="topbar-logo">IdeaHub</div>
+          <div className="topbar-logo">Idealmente</div>
           <div className="topbar-sub">Business Intelligence Collective</div>
           <div className="topbar-spacer" />
           <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
-            <span style={{ fontSize: 12, color: "var(--text3)" }}>Utente:</span>
-            <select
-              value={currentUser}
-              onChange={e => setCurrentUser(e.target.value)}
-              style={{ background: "var(--surface2)", border: "1px solid var(--border)", borderRadius: 8, padding: "4px 10px", color: "var(--text)", fontSize: 13, cursor: "pointer" }}
-            >
-              {DEMO_USERS.map(u => <option key={u}>{u}</option>)}
-            </select>
+            {editingName ? (
+              <>
+                <input
+                  className="form-input"
+                  value={tempName}
+                  onChange={e => setTempName(e.target.value)}
+                  onKeyDown={e => {
+                    if (e.key === "Enter" && tempName.trim()) {
+                      const n = tempName.trim();
+                      setCurrentUser(n);
+                      localStorage.setItem("idealmente_username", n);
+                      setEditingName(false);
+                    }
+                    if (e.key === "Escape") setEditingName(false);
+                  }}
+                  style={{ padding: "4px 10px", fontSize: 13, width: 150 }}
+                  autoFocus
+                />
+                <button className="btn btn-ghost btn-sm" onClick={() => {
+                  if (tempName.trim()) {
+                    const n = tempName.trim();
+                    setCurrentUser(n);
+                    localStorage.setItem("idealmente_username", n);
+                  }
+                  setEditingName(false);
+                }}>✓</button>
+              </>
+            ) : (
+              <span
+                style={{ fontSize: 13, color: "var(--text2)", cursor: "pointer" }}
+                title="Clicca per cambiare nome"
+                onClick={() => { setTempName(currentUser); setEditingName(true); }}
+              >
+                {currentUser} <span style={{ color: "var(--text3)", fontSize: 11 }}>✎</span>
+              </span>
+            )}
           </div>
           <div className="avatar" style={{ background: `linear-gradient(135deg, ${hashColor(currentUser)}, ${hashColor(currentUser + "2")})` }}>
             {initials(currentUser)}
@@ -1328,13 +1621,37 @@ export default function App() {
         {/* SIDEBAR */}
         <div className="sidebar">
           <div className="sidebar-section">
-            <button className="btn btn-primary" style={{ width: "100%", justifyContent: "center" }} onClick={() => setShowNew(true)}>
+            <button className="btn btn-primary" style={{ width: "100%", justifyContent: "center" }} onClick={() => { setPage("ideas"); setShowNew(true); }}>
               ➕ Nuova Idea
             </button>
           </div>
           <div className="sidebar-section" style={{ paddingBottom: 8 }}>
-            <div className="sidebar-label">Idee ({ideas.length})</div>
+            <div
+              onClick={() => setPage("ideas")}
+              style={{
+                display: "flex", alignItems: "center", gap: 8, padding: "8px 10px",
+                borderRadius: "var(--radius)", cursor: "pointer", marginBottom: 4,
+                background: page === "ideas" ? "var(--surface2)" : "transparent",
+                color: page === "ideas" ? "var(--text)" : "var(--text2)",
+                fontSize: 14, fontWeight: 500,
+              }}
+            >
+              💡 <span>Idee ({ideas.length})</span>
+            </div>
+            <div
+              onClick={() => setPage("meetings")}
+              style={{
+                display: "flex", alignItems: "center", gap: 8, padding: "8px 10px",
+                borderRadius: "var(--radius)", cursor: "pointer",
+                background: page === "meetings" ? "var(--surface2)" : "transparent",
+                color: page === "meetings" ? "var(--text)" : "var(--text2)",
+                fontSize: 14, fontWeight: 500,
+              }}
+            >
+              📅 <span>Meeting</span>
+            </div>
           </div>
+          {page === "ideas" && (
           <div className="ideas-list">
             {!loaded && <div style={{ color: "var(--text3)", fontSize: 13, textAlign: "center", padding: 20 }}>Caricamento...</div>}
             {loaded && ideas.length === 0 && <div style={{ color: "var(--text3)", fontSize: 13, textAlign: "center", padding: 20 }}>Nessuna idea ancora</div>}
@@ -1361,11 +1678,14 @@ export default function App() {
               );
             })}
           </div>
+          )}
         </div>
 
         {/* MAIN */}
         <div className="main">
-          {!selected ? (
+          {page === "meetings" ? (
+            <MeetingsPage />
+          ) : !selected ? (
             <div className="empty-state">
               <div className="empty-icon">💡</div>
               <h2>Benvenuto su IdeaHub</h2>
