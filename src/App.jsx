@@ -68,9 +68,12 @@ const STYLE = `
     .app {
       grid-template-columns: 1fr;
       grid-template-rows: auto auto 1fr;
-      height: 100svh;
+      height: 100dvh;
     }
     .topbar {
+      position: sticky;
+      top: 0;
+      z-index: 20;
       flex-wrap: wrap;
       padding: 10px 16px 0 16px;
       gap: 6px;
@@ -135,6 +138,9 @@ const STYLE = `
     .form-row { flex-direction: column; }
     .meeting-card { flex-wrap: wrap; }
     .meeting-actions { width: 100%; justify-content: flex-end; }
+    /* Prevent CTA overlap with topbar nav on mobile */
+    .main { padding-top: 0; }
+    .topbar-nav button { min-height: 38px; }
   }
 
   /* ── TOPBAR ── */
@@ -1018,6 +1024,8 @@ function NewIdeaModal({ onClose, onCreate, currentUser }) {
 }
 
 function OverviewTab({ idea, currentUser, onUpdate }) {
+  const [editingDesc, setEditingDesc] = useState(false);
+  const [descDraft, setDescDraft] = useState(idea.description || "");
   const allRatings = Object.values(idea.ratings || {});
   const avgByCriteria = CRITERIA.map(c => {
     const vals = allRatings.map(r => r[c.key]).filter(Boolean);
@@ -1385,8 +1393,6 @@ function AITab({ idea, onUpdate }) {
 
 function IdeaDetail({ idea, currentUser, onUpdate, onDelete }) {
   const [tab, setTab] = useState("overview");
-  const [editingDesc, setEditingDesc] = useState(false);
-  const [descDraft, setDescDraft] = useState(idea.description || "");
   const allRatings = Object.values(idea.ratings || {});
   const avgCriteria = CRITERIA.map(c => {
     const vals = allRatings.map(r => r[c.key]).filter(Boolean);
