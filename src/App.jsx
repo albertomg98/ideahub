@@ -77,13 +77,29 @@ const STYLE = `
       height: auto;
       max-height: 110px;
     }
+    /* Hide sidebar entirely when viewing an idea detail on mobile */
+    .sidebar-hidden-mobile { display: none !important; }
     .sidebar-section { border-bottom: none; border-right: 1px solid var(--border); padding: 8px; flex-shrink: 0; }
     .ideas-list { display: flex; flex-direction: row; gap: 6px; padding: 8px; overflow-x: auto; overflow-y: hidden; }
     .idea-item { min-width: 150px; margin-bottom: 0; }
     .main { overflow-y: auto; }
-    .idea-detail { padding: 16px; }
-    .detail-header { flex-wrap: wrap; }
-    .detail-actions { width: 100%; }
+    /* Idea detail mobile fixes */
+    .idea-detail { padding: 12px; }
+    .detail-header { flex-wrap: nowrap; align-items: flex-start; gap: 10px; padding-bottom: 12px; }
+    .detail-icon { width: 36px !important; height: 36px !important; font-size: 18px !important; border-radius: 10px !important; flex-shrink: 0; }
+    .detail-title { font-size: 16px !important; }
+    .detail-meta { flex-wrap: wrap; gap: 6px !important; font-size: 11px !important; }
+    .detail-actions { display: flex; flex-direction: column; gap: 4px; flex-shrink: 0; }
+    .detail-actions button { font-size: 11px; padding: 4px 8px; }
+    /* Rating row - prevent overflow */
+    .rating-row { display: flex; align-items: center; gap: 6px !important; overflow: hidden; }
+    .rating-label { width: 80px !important; font-size: 11px !important; flex-shrink: 0; }
+    .rating-row input[type="range"] { flex: 1; min-width: 0; max-width: calc(100% - 120px); }
+    .rating-row > div:last-child { width: 28px !important; font-size: 11px !important; flex-shrink: 0; }
+    /* Criteria row */
+    .criteria-row { gap: 6px !important; }
+    .criteria-label { width: 80px !important; font-size: 11px !important; }
+    .criteria-val { font-size: 11px !important; }
     .swot-grid { grid-template-columns: 1fr; }
     .score-grid { grid-template-columns: repeat(2, 1fr); }
     .modal { width: 95vw; padding: 16px; max-height: 90vh; overflow-y: auto; }
@@ -1325,13 +1341,13 @@ function IdeaDetail({ idea, currentUser, onUpdate, onDelete }) {
           <div className="detail-meta">
             <span>👤 {idea.createdBy}</span>
             <span>📅 {formatDate(idea.createdAt)}</span>
-            <span>💬 {(idea.comments || []).length} commenti</span>
-            <span>⭐ {allRatings.length} valutazioni</span>
+            <span>💬 {(idea.comments || []).length}</span>
+            <span>⭐ {allRatings.length}</span>
             {overallScore > 0 && <span className={`verdict-chip ${verdict.cls}`}>{verdict.label}</span>}
           </div>
         </div>
         <div className="detail-actions">
-          <button className="btn btn-danger btn-sm" onClick={onDelete}>🗑 Elimina</button>
+          <button className="btn btn-danger btn-sm" onClick={onDelete}>🗑</button>
         </div>
       </div>
 
@@ -2132,7 +2148,7 @@ export default function App() {
         </div>
 
         {/* SIDEBAR */}
-        <div className="sidebar">
+        <div className={`sidebar${selectedId && page === "ideas" ? " sidebar-hidden-mobile" : ""}`}>
           {page === "ideas" && (
           <div className="sidebar-section">
             <button className="btn btn-primary" style={{ width: "100%", justifyContent: "center" }} onClick={() => { setPage("ideas"); setShowNew(true); }}>
