@@ -1394,6 +1394,9 @@ async function removeReport(id) {
 function ReportsPage({ currentUser, onHome }) {
   const [reports, setReports] = useState([]);
   const [uploading, setUploading] = useState(false);
+  const [activeCategory, setActiveCategory] = useState("tutti"); // "tutti" | "report" | "minute"
+  const [uploadCategory, setUploadCategory] = useState("report");
+  const [showUploadModal, setShowUploadModal] = useState(false);
   const fileRef = useRef();
 
   useEffect(() => {
@@ -1414,9 +1417,11 @@ function ReportsPage({ currentUser, onHome }) {
         content: e.target.result,
         uploadedBy: currentUser,
         uploadedAt: Date.now(),
+        category: uploadCategory,
       };
       await saveReport(report);
       setUploading(false);
+      setShowUploadModal(false);
     };
     reader.readAsDataURL(f);
   };
@@ -1444,22 +1449,33 @@ function ReportsPage({ currentUser, onHome }) {
     return "📎";
   };
 
+  const getCategoryLabel = (cat) => cat === "minute" ? "📋 Minuta" : "📁 Report";
+  const getCategoryColor = (cat) => cat === "minute" ? "var(--accent3)" : "var(--accent)";
+
+  const filtered = activeCategory === "tutti" ? reports : reports.filter(r => (r.category || "report") === activeCategory);
+
+  const counts = {
+    tutti: reports.length,
+    report: reports.filter(r => (r.category || "report") === "report").length,
+    minute: reports.filter(r => r.category === "minute").length,
+  };
+
   return (
     <div style={{ padding: "20px 16px", maxWidth: 860, margin: "0 auto" }}>
       {/* Back + Title */}
       <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 16 }}>
         <button className="btn btn-ghost btn-sm" onClick={onHome}>← Home</button>
-        <h2 style={{ fontSize: 20, margin: 0 }}>📁 Report</h2>
+        <h2 style={{ fontSize: 20, margin: 0 }}>🗂 Documenti</h2>
       </div>
 
       {/* Full-width CTA */}
       <button
         className="btn btn-primary"
-        style={{ width: "100%", justifyContent: "center", marginBottom: 20, padding: "12px", fontSize: 15 }}
-        onClick={() => fileRef.current?.click()}
+        style={{ width: "100%", justifyContent: "center", marginBottom: 16, padding: "12px", fontSize: 15 }}
+        onClick={() => setShowUploadModal(true)}
         disabled={uploading}
       >
-        {uploading ? "⏳ Caricamento..." : "⬆️ Carica Report"}
+        {uploading ? "⏳ Caricamento..." : "⬆️ Carica Documento"}
       </button>
       <input
         ref={fileRef} type="file" style={{ display: "none" }}
@@ -1467,36 +1483,65 @@ function ReportsPage({ currentUser, onHome }) {
         onChange={e => handleFile(e.target.files[0])}
       />
 
-      {reports.length === 0 && !uploading && (
-        <div style={{ textAlign: "center", padding: "60px 0" }}>
-          <div style={{ fontSize: 48, marginBottom: 12 }}>📁</div>
-          <h3 style={{ color: "var(--text2)", marginBottom: 8, fontSize: 16 }}>Nessun report ancora</h3>
-          <p style={{ color: "var(--text3)", fontSize: 13 }}>Carica documenti che il tuo team potrà scaricare.</p>
+      {/* Category filter tabs */}
+      <div style={{ display: "flex", gap: 8, marginBottom: 20 }}>
+        {[["tutti", "Tutti"], ["report", "Report"], ["minute", "Minute Meeting"]].map(([key, label]) => (
+          <button key={key} onClick={() => setActiveCategory(key)} style={{
+            padding: "7px 14px", borderRadius: 20, border: "1px solid",
+            borderColor: activeCategory === key ? "var(--accent)" : "var(--border)",
+            background: activeCategory === key ? "var(--accent)18" : "transparent",
+            color: activeCategory === key ? "var(--accent)" : "var(--text2)",
+            fontSize: 13, fontWeight: 500, cursor: "pointer",
+            fontFamily: "'DM Sans', sans-serif", transition: "all 0.15s",
+            display: "flex", alignItems: "center", gap: 6,
+          }}>
+            {label}
+            <span style={{
+              background: activeCategory === key ? "var(--accent)" : "var(--surface3)",
+              color: activeCategory === key ? "#fff" : "var(--text3)",
+              borderRadius: 10, padding: "1px 7px", fontSize: 11, fontWeight: 700,
+            }}>{counts[key]}</span>
+          </button>
+        ))}
+      </div>
+
+      {filtered.length === 0 && !uploading && (
+        <div style={{ textAlign: "center", padding: "50px 0" }}>
+          <div style={{ fontSize: 44, marginBottom: 12 }}>🗂</div>
+          <h3 style={{ color: "var(--text2)", marginBottom: 8, fontSize: 16 }}>Nessun documento</h3>
+          <p style={{ color: "var(--text3)", fontSize: 13 }}>
+            {activeCategory === "tutti" ? "Carica il primo documento." :
+             activeCategory === "report" ? "Nessun report caricato." : "Nessuna minuta caricata."}
+          </p>
         </div>
       )}
 
       <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
-        {reports.map(r => (
+        {filtered.map(r => (
           <div key={r.id} style={{
             background: "var(--surface)", border: "1px solid var(--border)",
-            borderRadius: "var(--radius)", padding: "14px 16px",
-            transition: "border-color 0.15s",
+            borderRadius: "var(--radius)", padding: "14px 16px", transition: "border-color 0.15s",
           }}
             onMouseEnter={e => e.currentTarget.style.borderColor = "var(--accent)"}
             onMouseLeave={e => e.currentTarget.style.borderColor = "var(--border)"}
           >
-            {/* Top row: icon + name */}
-            <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 10 }}>
-              <div style={{ fontSize: 24, flexShrink: 0 }}>{getFileIcon(r.name)}</div>
-              <div style={{ fontWeight: 600, fontSize: 14, flex: 1, minWidth: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{r.name}</div>
+            <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 8 }}>
+              <div style={{ fontSize: 22, flexShrink: 0 }}>{getFileIcon(r.name)}</div>
+              <div style={{ flex: 1, minWidth: 0 }}>
+                <div style={{ fontWeight: 600, fontSize: 14, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{r.name}</div>
+              </div>
+              <span style={{
+                fontSize: 10, fontWeight: 600, padding: "3px 8px", borderRadius: 10, flexShrink: 0,
+                background: getCategoryColor(r.category || "report") + "22",
+                color: getCategoryColor(r.category || "report"),
+                border: `1px solid ${getCategoryColor(r.category || "report")}44`,
+              }}>{getCategoryLabel(r.category || "report")}</span>
             </div>
-            {/* Meta row: horizontal */}
             <div style={{ display: "flex", gap: 12, flexWrap: "wrap", marginBottom: 10, fontSize: 12, color: "var(--text3)" }}>
               <span>👤 {r.uploadedBy}</span>
               <span>📅 {formatDate(r.uploadedAt)}</span>
               <span>💾 {formatSize(r.size)}</span>
             </div>
-            {/* Actions */}
             <div style={{ display: "flex", gap: 8 }}>
               <button className="btn btn-primary btn-sm" style={{ flex: 1, justifyContent: "center" }} onClick={() => downloadReport(r)}>⬇️ Scarica</button>
               <button className="btn btn-danger btn-sm" onClick={() => removeReport(r.id)}>🗑</button>
@@ -1504,6 +1549,36 @@ function ReportsPage({ currentUser, onHome }) {
           </div>
         ))}
       </div>
+
+      {/* Upload modal with category selection */}
+      {showUploadModal && (
+        <div className="modal-overlay" onClick={e => e.target === e.currentTarget && setShowUploadModal(false)}>
+          <div className="modal">
+            <h3>⬆️ Carica Documento</h3>
+            <div className="form-group">
+              <label className="form-label">Categoria</label>
+              <div style={{ display: "flex", gap: 8 }}>
+                {[["report", "📁 Report"], ["minute", "📋 Minuta Meeting"]].map(([key, label]) => (
+                  <button key={key} onClick={() => setUploadCategory(key)} style={{
+                    flex: 1, padding: "10px", borderRadius: 8, cursor: "pointer",
+                    border: `1px solid ${uploadCategory === key ? "var(--accent)" : "var(--border)"}`,
+                    background: uploadCategory === key ? "var(--accent)18" : "var(--surface2)",
+                    color: uploadCategory === key ? "var(--accent)" : "var(--text2)",
+                    fontSize: 13, fontWeight: 500, fontFamily: "'DM Sans', sans-serif",
+                    transition: "all 0.15s",
+                  }}>{label}</button>
+                ))}
+              </div>
+            </div>
+            <div className="modal-footer">
+              <button className="btn btn-ghost" onClick={() => setShowUploadModal(false)}>Annulla</button>
+              <button className="btn btn-primary" onClick={() => fileRef.current?.click()}>
+                Scegli file →
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
@@ -2240,7 +2315,7 @@ export default function App() {
             {[
               ["ideas", "💡", "Idee"],
               ["meetings", "📅", "Meeting"],
-              ["reports", "📁", "Report"],
+              ["reports", "🗂", "Documenti"],
             ].map(([key, icon, label]) => (
               <button
                 key={key}
