@@ -21,42 +21,36 @@ const STYLE = `
   *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
   :root {
-    --bg: #080b12;
-    --surface: #0d1017;
-    --surface2: #131820;
-    --surface3: #192030;
-    --border: #1e2838;
-    --accent: #6c63ff;
-    --accent2: #ff6b6b;
-    --accent3: #43d9ad;
-    --text: #ffffff;
-    --text2: #94a3b8;
-    --text3: #475569;
-    --radius: 12px;
-    --radius-lg: 20px;
+    --bg: #05080f;
+    --surface: #090d16;
+    --surface2: #0f1420;
+    --surface3: #161d2e;
+    --border: #1c2a42;
+    --accent: #3b5bff;
+    --accent2: #ff4757;
+    --accent3: #00c9a7;
+    --text: #eef1f9;
+    --text2: #7a90b8;
+    --text3: #3d5070;
+    --radius: 3px;
+    --radius-lg: 6px;
   }
 
   html, body, #root { height: 100%; width: 100%; }
 
   body {
-    background-color: #080b12;
-    background-image:
-      radial-gradient(ellipse 80% 60% at 0% 0%, rgba(108,99,255,0.10) 0%, transparent 55%),
-      radial-gradient(ellipse 60% 50% at 100% 100%, rgba(67,217,173,0.07) 0%, transparent 55%),
-      linear-gradient(rgba(108,99,255,0.04) 1px, transparent 1px),
-      linear-gradient(90deg, rgba(108,99,255,0.04) 1px, transparent 1px);
-    background-size: 100% 100%, 100% 100%, 52px 52px, 52px 52px;
-    background-attachment: fixed;
+    background: var(--bg);
     color: var(--text);
     font-family: 'DM Sans', sans-serif;
-    font-size: 15px;
-    line-height: 1.6;
+    font-size: 14px;
+    line-height: 1.7;
     -webkit-font-smoothing: antialiased;
+    letter-spacing: 0.01em;
   }
 
-  ::-webkit-scrollbar { width: 6px; }
-  ::-webkit-scrollbar-track { background: rgba(13,16,23,0.75); }
-  ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+  ::-webkit-scrollbar { width: 4px; }
+  ::-webkit-scrollbar-track { background: transparent; }
+  ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
 
   h1,h2,h3,h4 { font-family: 'Syne', sans-serif; }
 
@@ -129,7 +123,7 @@ const STYLE = `
   /* ── TOPBAR ── */
   .topbar {
     grid-column: 1 / -1;
-    background: rgba(8,11,18,0.8);
+    background: var(--surface);
     backdrop-filter: blur(12px);
     -webkit-backdrop-filter: blur(12px);
     border-bottom: 1px solid var(--border);
@@ -142,12 +136,10 @@ const STYLE = `
   .topbar-logo {
     font-family: 'Syne', sans-serif;
     font-weight: 800;
-    font-size: 18px;
-    letter-spacing: -0.5px;
-    background: linear-gradient(135deg, var(--accent), var(--accent3));
-    -webkit-background-clip: text;
-    -webkit-text-fill-color: transparent;
-    background-clip: text;
+    font-size: 13px;
+    letter-spacing: 0.25em;
+    text-transform: uppercase;
+    color: #ffffff;
     flex-shrink: 0;
   }
   .topbar-sub {
@@ -178,7 +170,7 @@ const STYLE = `
   /* ── SIDEBAR ── */
   .sidebar-hidden-mobile { display: none !important; }
   .sidebar {
-    background: rgba(13,16,23,0.7);
+    background: var(--surface);
     border-right: 1px solid var(--border);
     display: flex;
     flex-direction: column;
@@ -189,12 +181,14 @@ const STYLE = `
     border-bottom: 1px solid var(--border);
   }
   .sidebar-label {
-    font-size: 10px;
+    font-size: 9px;
     font-weight: 700;
-    letter-spacing: 1.5px;
+    letter-spacing: 0.2em;
     text-transform: uppercase;
-    color: var(--text3);
-    margin-bottom: 10px;
+    color: var(--accent);
+    margin-bottom: 12px;
+    padding-bottom: 8px;
+    border-bottom: 1px solid var(--border);
   }
   .ideas-list { overflow-y: auto; flex: 1; padding: 8px; }
   .idea-item {
@@ -205,9 +199,9 @@ const STYLE = `
     margin-bottom: 4px;
     border: 1px solid transparent;
   }
-  .idea-item:hover { background: rgba(19,24,32,0.75); }
+  .idea-item:hover { background: var(--surface2); }
   .idea-item.active {
-    background: rgba(19,24,32,0.75);
+    background: var(--surface2);
     border-color: var(--accent);
   }
   .idea-item-title {
@@ -239,27 +233,29 @@ const STYLE = `
 
   .btn {
     display: inline-flex; align-items: center; gap: 8px;
-    padding: 9px 18px;
-    border-radius: var(--radius);
+    padding: 10px 20px;
+    border-radius: 3px;
     border: none;
     cursor: pointer;
     font-family: 'DM Sans', sans-serif;
-    font-size: 14px;
-    font-weight: 500;
+    font-size: 12px;
+    font-weight: 600;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
     transition: all 0.15s;
   }
   .btn-primary {
     background: var(--accent);
     color: white;
   }
-  .btn-primary:hover { background: #7d75ff; }
+  .btn-primary:hover { background: #6070ff; transform: translateY(-1px); }
   .btn-ghost {
     background: transparent;
     color: var(--text2);
     border: 1px solid var(--border);
   }
-  .btn-ghost:hover { background: rgba(19,24,32,0.75); color: var(--text); }
-  .btn-sm { padding: 6px 14px; font-size: 13px; }
+  .btn-ghost:hover { background: var(--surface2); color: var(--text); }
+  .btn-sm { padding: 6px 14px; font-size: 11px; }
   .btn-danger { background: #ff6b6b22; color: var(--accent2); border: 1px solid #ff6b6b33; }
   .btn-danger:hover { background: #ff6b6b44; }
   .btn-success { background: #43d9ad22; color: var(--accent3); border: 1px solid #43d9ad33; }
@@ -268,14 +264,18 @@ const STYLE = `
 
   /* ── FULL WIDTH when sidebar hidden ── */
   .app.no-sidebar {
-    grid-template-columns: 0 1fr;
+    grid-template-columns: 0px 1fr;
   }
-  .app.no-sidebar .sidebar { display: none; }
+  .app.no-sidebar .sidebar { 
+    display: none !important;
+    width: 0;
+    overflow: hidden;
+  }
 
   /* ── MAIN ── */
   .main {
     overflow-y: auto;
-    background: transparent;
+    background: var(--bg);
   }
 
   /* ── EMPTY STATE ── */
@@ -318,7 +318,7 @@ const STYLE = `
 
   .tabs {
     display: flex; gap: 4px; margin-bottom: 24px;
-    background: rgba(13,16,23,0.75);
+    background: var(--surface);
     padding: 4px;
     border-radius: var(--radius);
     width: fit-content;
@@ -336,14 +336,14 @@ const STYLE = `
     font-family: 'DM Sans', sans-serif;
   }
   .tab.active {
-    background: rgba(25,32,48,0.75);
+    background: var(--surface3);
     color: var(--text);
   }
   .tab:hover:not(.active) { color: var(--text); }
 
   /* ── CARD ── */
   .card {
-    background: rgba(13,16,23,0.75);
+    background: var(--surface);
     border: 1px solid var(--border);
     border-radius: var(--radius-lg);
     padding: 24px;
@@ -361,7 +361,7 @@ const STYLE = `
 
   /* ── DOCUMENT VIEWER ── */
   .doc-preview {
-    background: rgba(19,24,32,0.75);
+    background: var(--surface2);
     border: 1px solid var(--border);
     border-radius: var(--radius);
     padding: 20px;
@@ -382,7 +382,7 @@ const STYLE = `
     margin-bottom: 20px;
   }
   .score-card {
-    background: rgba(19,24,32,0.75);
+    background: var(--surface2);
     border: 1px solid var(--border);
     border-radius: var(--radius);
     padding: 16px;
@@ -432,10 +432,10 @@ const STYLE = `
   .tag-pro { background: #43d9ad22; color: var(--accent3); }
   .tag-con { background: #ff6b6b22; color: var(--accent2); }
   .tag-question { background: #6c63ff22; color: var(--accent); }
-  .tag-neutral { background: rgba(25,32,48,0.75); color: var(--text2); }
+  .tag-neutral { background: var(--surface3); color: var(--text2); }
 
   .comment-input-area {
-    background: rgba(19,24,32,0.75);
+    background: var(--surface2);
     border: 1px solid var(--border);
     border-radius: var(--radius);
     padding: 14px;
@@ -484,7 +484,7 @@ const STYLE = `
   @keyframes spin { to { transform: rotate(360deg); } }
 
   .ai-output {
-    background: rgba(19,24,32,0.75);
+    background: var(--surface2);
     border: 1px solid var(--border);
     border-radius: var(--radius);
     padding: 20px;
@@ -502,7 +502,7 @@ const STYLE = `
     margin-top: 16px;
   }
   .swot-card {
-    background: rgba(19,24,32,0.75);
+    background: var(--surface2);
     border: 1px solid var(--border);
     border-radius: var(--radius);
     padding: 16px;
@@ -532,7 +532,7 @@ const STYLE = `
   }
   @keyframes fadeIn { from { opacity: 0; } }
   .modal {
-    background: rgba(13,16,23,0.75);
+    background: var(--surface);
     border: 1px solid var(--border);
     border-radius: var(--radius-lg);
     padding: 32px;
@@ -546,7 +546,7 @@ const STYLE = `
   .form-label { font-size: 12px; font-weight: 600; letter-spacing: 0.5px; text-transform: uppercase; color: var(--text3); margin-bottom: 6px; display: block; }
   .form-input {
     width: 100%;
-    background: rgba(19,24,32,0.75);
+    background: var(--surface2);
     border: 1px solid var(--border);
     border-radius: var(--radius);
     padding: 10px 14px;
@@ -575,7 +575,7 @@ const STYLE = `
   .upload-zone span { color: var(--accent); font-weight: 500; }
   .file-chosen {
     display: flex; align-items: center; gap: 10px;
-    background: rgba(25,32,48,0.75);
+    background: var(--surface3);
     border-radius: var(--radius);
     padding: 10px 14px;
     font-size: 13px; color: var(--text2);
@@ -590,7 +590,7 @@ const STYLE = `
   }
   .member-chip {
     display: flex; align-items: center; gap: 6px;
-    background: rgba(25,32,48,0.75);
+    background: var(--surface3);
     border: 1px solid var(--border);
     border-radius: 20px;
     padding: 4px 12px 4px 6px;
@@ -604,7 +604,7 @@ const STYLE = `
 
   /* ── USER SELECTOR ── */
   .user-select-area {
-    background: rgba(19,24,32,0.75);
+    background: var(--surface2);
     border: 1px solid var(--border);
     border-radius: var(--radius);
     padding: 12px;
@@ -617,7 +617,7 @@ const STYLE = `
     padding: 4px 10px; border-radius: 20px;
     font-size: 12px; cursor: pointer;
     border: 1px solid var(--border);
-    background: rgba(25,32,48,0.75);
+    background: var(--surface3);
     color: var(--text2);
     transition: all 0.12s;
   }
@@ -654,7 +654,7 @@ const STYLE = `
   /* ── PROGRESS BAR ── */
   .progress-bar {
     height: 6px; border-radius: 3px;
-    background: rgba(25,32,48,0.75);
+    background: var(--surface3);
     overflow: hidden;
     flex: 1;
   }
@@ -668,7 +668,7 @@ const STYLE = `
 
   /* ── MEETINGS ── */
   .meeting-card {
-    background: rgba(13,16,23,0.75);
+    background: var(--surface);
     border: 1px solid var(--border);
     border-radius: var(--radius);
     padding: 16px 20px;
@@ -679,7 +679,7 @@ const STYLE = `
   .meeting-card:hover { border-color: var(--accent); }
   .meeting-date-box {
     width: 52px; height: 52px; border-radius: 12px;
-    background: rgba(19,24,32,0.75);
+    background: var(--surface2);
     border: 1px solid var(--border);
     display: flex; flex-direction: column; align-items: center; justify-content: center;
     flex-shrink: 0;
@@ -696,7 +696,7 @@ const STYLE = `
     padding: 5px 12px; border-radius: 8px;
     font-size: 12px; font-weight: 500; cursor: pointer;
     border: 1px solid var(--border);
-    background: rgba(19,24,32,0.75); color: var(--text2);
+    background: var(--surface2); color: var(--text2);
     transition: all 0.15s; text-decoration: none;
   }
   .cal-btn:hover { border-color: var(--accent); color: var(--accent); }
@@ -705,7 +705,7 @@ const STYLE = `
     -webkit-appearance: none;
     width: 100%;
     height: 6px;
-    background: rgba(25,32,48,0.75);
+    background: var(--surface3);
     border-radius: 3px;
     outline: none;
     flex: 1;
@@ -719,7 +719,7 @@ const STYLE = `
   }
 
   .api-key-bar {
-    background: rgba(19,24,32,0.75);
+    background: var(--surface2);
     border: 1px solid var(--border);
     border-radius: var(--radius);
     padding: 10px 14px;
@@ -742,7 +742,7 @@ const STYLE = `
     display: inline-flex; align-items: center;
     padding: 2px 10px; border-radius: 20px;
     font-size: 11px; font-weight: 600;
-    background: rgba(25,32,48,0.75);
+    background: var(--surface3);
     color: var(--text2);
   }
 `;
@@ -1482,7 +1482,7 @@ function ReportsPage({ currentUser, onHome }) {
       {/* Back + Title */}
       <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 16 }}>
         <button className="btn btn-ghost btn-sm" onClick={onHome}>← Home</button>
-        <h2 style={{ fontSize: 20, margin: 0 }}>Documenti</h2>
+        <h2 style={{ fontSize: 13, fontFamily: "'Syne', sans-serif", fontWeight: 800, letterSpacing: "0.15em", textTransform: "uppercase", margin: 0 }}>Documenti</h2>
       </div>
 
       {/* Full-width CTA */}
@@ -1536,7 +1536,7 @@ function ReportsPage({ currentUser, onHome }) {
       <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
         {filtered.map(r => (
           <div key={r.id} style={{
-            background: "rgba(13,16,23,0.7)", border: "1px solid var(--border)",
+            background: "var(--surface)", border: "1px solid var(--border)",
             borderRadius: "var(--radius)", padding: "14px 16px", transition: "border-color 0.15s",
           }}
             onMouseEnter={e => e.currentTarget.style.borderColor = "var(--accent)"}
@@ -1667,10 +1667,11 @@ function HomePage({ ideas, onSelect, onNew, getIdeaScore }) {
   return (
     <div style={{ padding: "24px 16px", maxWidth: 1100, margin: "0 auto" }}>
       {/* Header */}
-      <div style={{ marginBottom: 20 }}>
-        <h2 style={{ fontSize: 22, marginBottom: 6 }}>Benvenuto su Idealmente</h2>
-        <p style={{ color: "var(--text2)", fontSize: 14, marginBottom: 16 }}>Seleziona un'idea da approfondire o creane una nuova.</p>
-        <button className="btn btn-primary" style={{ width: "100%" }} onClick={onNew}>+ Nuova Idea</button>
+      <div style={{ marginBottom: 32, borderBottom: "1px solid var(--border)", paddingBottom: 28 }}>
+        <div style={{ fontSize: 9, fontWeight: 700, letterSpacing: "0.25em", textTransform: "uppercase", color: "var(--accent)", marginBottom: 12 }}>Business Intelligence Collective</div>
+        <h1 style={{ fontFamily: "'Syne', sans-serif", fontSize: 28, fontWeight: 800, letterSpacing: "-0.02em", marginBottom: 8, color: "var(--text)" }}>Idealmente</h1>
+        <p style={{ color: "var(--text3)", fontSize: 13, marginBottom: 20, letterSpacing: "0.01em" }}>Valuta, analizza e sviluppa le tue idee di business.</p>
+        <button className="btn btn-primary" onClick={onNew} style={{ letterSpacing: "0.1em" }}>+ Nuova Idea</button>
       </div>
 
       {ideas.length === 0 ? (
@@ -1695,12 +1696,13 @@ function HomePage({ ideas, onSelect, onNew, getIdeaScore }) {
                 key={idea.id}
                 onClick={() => onSelect(idea.id)}
                 style={{
-                  background: "rgba(13,16,23,0.7)", border: "1px solid var(--border)",
-                  borderRadius: "var(--radius-lg)", padding: 20, cursor: "pointer",
-                  transition: "all 0.15s", display: "flex", flexDirection: "column", gap: 14,
+                  background: "var(--surface)", border: "1px solid var(--border)",
+                  borderLeft: "3px solid var(--accent)",
+                  borderRadius: "var(--radius)", padding: "20px 24px", cursor: "pointer",
+                  transition: "all 0.2s", display: "flex", flexDirection: "column", gap: 14,
                 }}
-                onMouseEnter={e => { e.currentTarget.style.borderColor = "var(--accent)"; e.currentTarget.style.transform = "translateY(-2px)"; }}
-                onMouseLeave={e => { e.currentTarget.style.borderColor = "var(--border)"; e.currentTarget.style.transform = "none"; }}
+                onMouseEnter={e => { e.currentTarget.style.background = "var(--surface2)"; e.currentTarget.style.borderLeftColor = "var(--accent3)"; }}
+                onMouseLeave={e => { e.currentTarget.style.background = "var(--surface)"; e.currentTarget.style.borderLeftColor = "var(--accent)"; }}
               >
                 <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
                   <div style={{
@@ -1884,7 +1886,7 @@ function MeetingsPage({ onHome }) {
       {/* Back + Title */}
       <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 16 }}>
         <button className="btn btn-ghost btn-sm" onClick={onHome}>← Home</button>
-        <h2 style={{ fontSize: 20, margin: 0 }}>Meeting</h2>
+        <h2 style={{ fontSize: 13, fontFamily: "'Syne', sans-serif", fontWeight: 800, letterSpacing: "0.15em", textTransform: "uppercase", margin: 0 }}>Meeting</h2>
       </div>
 
       {/* Full-width CTA */}
@@ -1928,7 +1930,7 @@ function MeetingsPage({ onHome }) {
           {nextMeeting.participants?.length > 0 && (
             <div style={{ display: "flex", gap: 4, flexWrap: "wrap", marginBottom: 8 }}>
               {nextMeeting.participants.map((p, i) => (
-                <span key={i} style={{ fontSize: 11, background: "rgba(25,32,48,0.7)", borderRadius: 20, padding: "2px 8px", color: "var(--text2)" }}>{p}</span>
+                <span key={i} style={{ fontSize: 11, background: "var(--surface3)", borderRadius: 20, padding: "2px 8px", color: "var(--text2)" }}>{p}</span>
               ))}
             </div>
           )}
@@ -1945,7 +1947,7 @@ function MeetingsPage({ onHome }) {
         </div>
       ) : (
         <div style={{
-          background: "rgba(13,16,23,0.7)", border: "1px dashed var(--border)",
+          background: "var(--surface)", border: "1px dashed var(--border)",
           borderRadius: "var(--radius-lg)", padding: "20px", marginBottom: 20,
           textAlign: "center", color: "var(--text3)", fontSize: 14,
         }}>
@@ -2006,7 +2008,7 @@ function MeetingsPage({ onHome }) {
               {m.notes && <div style={{ fontSize: 12, color: "var(--text3)", fontStyle: "italic" }}>📝 {m.notes}</div>}
               <div>
                 {m.minutes ? (
-                  <div style={{ background: "rgba(19,24,32,0.7)", border: "1px solid var(--border)", borderRadius: 8, padding: "10px 14px" }}>
+                  <div style={{ background: "var(--surface2)", border: "1px solid var(--border)", borderRadius: 8, padding: "10px 14px" }}>
                     <div style={{ fontSize: 12, color: "var(--accent3)", marginBottom: 4, fontWeight: 600 }}>📋 {m.minutes.fileName}</div>
                     <div style={{ fontSize: 12, color: "var(--text2)", lineHeight: 1.6, maxHeight: 100, overflow: "auto" }}>
                       {m.minutes.text.slice(0, 400)}{m.minutes.text.length > 400 ? "…" : ""}
@@ -2081,7 +2083,7 @@ function AuthScreen({ onAuth }) {
       background: "var(--bg)", padding: 16,
     }}>
       <div style={{
-        background: "rgba(13,16,23,0.7)", border: "1px solid var(--border)",
+        background: "var(--surface)", border: "1px solid var(--border)",
         borderRadius: "var(--radius-lg)", padding: "40px 32px", width: "100%", maxWidth: 400,
         boxShadow: "0 24px 80px rgba(0,0,0,0.4)",
       }}>
@@ -2338,14 +2340,18 @@ export default function App() {
                 key={key}
                 onClick={() => { setPage(key); if (key === "ideas") setSelectedId(null); }}
                 style={{
-                  background: page === key ? "var(--surface3)" : "transparent",
-                  border: page === key ? "1px solid var(--border)" : "1px solid transparent",
-                  borderRadius: 8, padding: "6px 14px",
-                  color: page === key ? "var(--text)" : "var(--text2)",
-                  fontSize: 13, fontWeight: 500, cursor: "pointer",
+                  background: "transparent",
+                  border: "none",
+                  borderBottom: page === key ? "2px solid var(--accent)" : "2px solid transparent",
+                  padding: "0 16px",
+                  height: "52px",
+                  color: page === key ? "var(--text)" : "var(--text3)",
+                  fontSize: 11, fontWeight: 600, cursor: "pointer",
                   fontFamily: "'DM Sans', sans-serif",
+                  letterSpacing: "0.1em",
+                  textTransform: "uppercase",
                   display: "flex", alignItems: "center", gap: 6,
-                  transition: "all 0.15s",
+                  transition: "all 0.2s",
                 }}
               >{icon} {label}</button>
             ))}
@@ -2365,7 +2371,7 @@ export default function App() {
             {showUserMenu && (
               <div style={{
                 position: "absolute", right: 0, top: "calc(100% + 8px)",
-                background: "rgba(13,16,23,0.7)", border: "1px solid var(--border)",
+                background: "var(--surface)", border: "1px solid var(--border)",
                 borderRadius: "var(--radius)", padding: 8, minWidth: 200,
                 boxShadow: "0 8px 32px rgba(0,0,0,0.3)", zIndex: 100,
               }}>
