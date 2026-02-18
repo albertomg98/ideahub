@@ -2385,6 +2385,7 @@ function ChangePwdModal({ user, onClose }) {
 export default function App() {
   const [user, setUser] = useState(undefined); // undefined = loading, null = not logged in
   const [ideas, setIdeas] = useState([]);
+  const [trash, setTrash] = useState([]);
   const [selectedId, setSelectedId] = useState(null);
   const [showNew, setShowNew] = useState(false);
   const [page, setPage] = useState("ideas");
@@ -2406,6 +2407,13 @@ export default function App() {
       setIdeas(data);
       setLoaded(true);
     });
+    return () => unsub();
+  }, [user]);
+
+  // Subscribe to trash
+  useEffect(() => {
+    if (!user) return;
+    const unsub = subscribeTrash(setTrash);
     return () => unsub();
   }, [user]);
 
@@ -2442,14 +2450,6 @@ export default function App() {
 
   // Logged in
   const currentUser = user.displayName || user.email;
-
-  const [trash, setTrash] = useState([]);
-
-  useEffect(() => {
-    if (!user) return;
-    const unsub = subscribeTrash(setTrash);
-    return () => unsub();
-  }, [user]);
 
   const createIdea = async (idea) => {
     await saveIdea(idea);
