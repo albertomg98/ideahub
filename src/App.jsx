@@ -68,17 +68,30 @@ const STYLE = `
     .app {
       grid-template-columns: 1fr;
       grid-template-rows: auto auto 1fr;
+      height: 100svh;
     }
     .topbar {
       flex-wrap: wrap;
       padding: 10px 16px;
-      gap: 10px;
+      gap: 8px;
       height: auto;
+      min-height: 88px;
     }
-    .topbar-logo { font-size: 16px; }
+    .topbar-logo { font-size: 14px; }
     .topbar-spacer { display: none; }
-    .topbar-nav { order: 3; width: 100%; justify-content: center; }
-    .topbar-nav button { flex: 1; justify-content: center; font-size: 12px; padding: 6px 8px; }
+    .topbar-nav { order: 3; width: 100%; justify-content: center; border-top: 1px solid var(--border); padding-top: 8px; }
+    .topbar-nav button { 
+      flex: 1; 
+      justify-content: center; 
+      font-size: 10px; 
+      padding: 6px 4px;
+      height: auto !important;
+      border-bottom: 2px solid transparent;
+      letter-spacing: 0.08em;
+    }
+    .topbar-nav button[style*="border-bottom: 2px solid var(--accent)"] {
+      border-bottom-color: var(--accent) !important;
+    }
     .sidebar {
       grid-column: 1;
       border-right: none;
