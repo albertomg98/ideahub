@@ -72,25 +72,29 @@ const STYLE = `
     }
     .topbar {
       flex-wrap: wrap;
-      padding: 10px 16px;
-      gap: 8px;
+      padding: 10px 16px 0 16px;
+      gap: 6px;
       height: auto;
-      min-height: 88px;
     }
-    .topbar-logo { font-size: 14px; }
+    .topbar-logo { font-size: 13px; order: 1; }
     .topbar-spacer { display: none; }
-    .topbar-nav { order: 3; width: 100%; justify-content: center; border-top: 1px solid var(--border); padding-top: 8px; }
+    .topbar-user-wrap { order: 2; margin-left: auto; }
+    .topbar-nav { 
+      order: 3; 
+      width: 100%; 
+      justify-content: stretch;
+      border-top: 1px solid var(--border);
+      margin-top: 6px;
+    }
     .topbar-nav button { 
       flex: 1; 
       justify-content: center; 
-      font-size: 10px; 
-      padding: 6px 4px;
+      font-size: 10px !important; 
+      padding: 10px 4px !important;
       height: auto !important;
-      border-bottom: 2px solid transparent;
-      letter-spacing: 0.08em;
-    }
-    .topbar-nav button[style*="border-bottom: 2px solid var(--accent)"] {
-      border-bottom-color: var(--accent) !important;
+      letter-spacing: 0.06em !important;
+      flex-direction: column;
+      gap: 2px !important;
     }
     .sidebar {
       grid-column: 1;
@@ -1081,13 +1085,42 @@ function OverviewTab({ idea, currentUser, onUpdate }) {
         ))}
       </div>
 
-      {/* DESCRIPTION */}
-      {idea.description && (
-        <div className="card">
-          <div className="card-title">📝 Descrizione</div>
-          <p style={{ color: "var(--text2)", lineHeight: 1.7, fontSize: 14 }}>{idea.description}</p>
+      {/* DESCRIPTION - always visible, editable */}
+      <div className="card">
+        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 12 }}>
+          <div className="card-title" style={{ marginBottom: 0 }}>Descrizione</div>
+          {!editingDesc && (
+            <button
+              className="btn btn-ghost btn-sm"
+              style={{ fontSize: 11, padding: "3px 10px" }}
+              onClick={() => { setDescDraft(idea.description || ""); setEditingDesc(true); }}
+            >Modifica</button>
+          )}
         </div>
-      )}
+        {editingDesc ? (
+          <div>
+            <textarea
+              className="form-input"
+              rows={4}
+              value={descDraft}
+              onChange={e => setDescDraft(e.target.value)}
+              placeholder="Descrivi l'idea: contesto, problema che risolve, target..."
+              style={{ resize: "vertical", marginBottom: 10 }}
+              autoFocus
+            />
+            <div style={{ display: "flex", gap: 8 }}>
+              <button className="btn btn-primary btn-sm" onClick={() => { onUpdate({ ...idea, description: descDraft }); setEditingDesc(false); }}>Salva</button>
+              <button className="btn btn-ghost btn-sm" onClick={() => setEditingDesc(false)}>Annulla</button>
+            </div>
+          </div>
+        ) : (
+          idea.description
+            ? <p style={{ color: "var(--text2)", lineHeight: 1.8, fontSize: 14 }}>{idea.description}</p>
+            : <p style={{ color: "var(--text3)", fontSize: 13, fontStyle: "italic" }} onClick={() => { setDescDraft(""); setEditingDesc(true); }}>
+                Nessuna descrizione — clicca Modifica per aggiungerne una.
+              </p>
+        )}
+      </div>
 
       {/* DOC PREVIEW */}
       {idea.docText && (
@@ -1352,6 +1385,8 @@ function AITab({ idea, onUpdate }) {
 
 function IdeaDetail({ idea, currentUser, onUpdate, onDelete }) {
   const [tab, setTab] = useState("overview");
+  const [editingDesc, setEditingDesc] = useState(false);
+  const [descDraft, setDescDraft] = useState(idea.description || "");
   const allRatings = Object.values(idea.ratings || {});
   const avgCriteria = CRITERIA.map(c => {
     const vals = allRatings.map(r => r[c.key]).filter(Boolean);
@@ -2359,7 +2394,7 @@ export default function App() {
           </div>
           <div className="topbar-spacer" />
           {/* USER MENU */}
-          <div style={{ position: "relative" }}>
+          <div className="topbar-user-wrap" style={{ position: "relative" }}>
             <div
               style={{ display: "flex", gap: 8, alignItems: "center", cursor: "pointer" }}
               onClick={() => setShowUserMenu(v => !v)}
