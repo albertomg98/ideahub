@@ -21,17 +21,17 @@ const STYLE = `
   *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
   :root {
-    --bg: #0c0c0f;
-    --surface: #141418;
-    --surface2: #1c1c22;
-    --surface3: #242430;
-    --border: #2a2a38;
+    --bg: #080b12;
+    --surface: #0d1017;
+    --surface2: #131820;
+    --surface3: #192030;
+    --border: #1e2838;
     --accent: #6c63ff;
     --accent2: #ff6b6b;
     --accent3: #43d9ad;
-    --text: #e8e8f0;
-    --text2: #9090a8;
-    --text3: #5a5a72;
+    --text: #ffffff;
+    --text2: #94a3b8;
+    --text3: #475569;
     --radius: 12px;
     --radius-lg: 20px;
   }
@@ -47,6 +47,30 @@ const STYLE = `
     -webkit-font-smoothing: antialiased;
   }
 
+  /* ── FUTURISTIC BACKGROUND ── */
+  body::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    z-index: 0;
+    background-image:
+      linear-gradient(rgba(108,99,255,0.04) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(108,99,255,0.04) 1px, transparent 1px);
+    background-size: 56px 56px;
+    pointer-events: none;
+  }
+  body::after {
+    content: '';
+    position: fixed;
+    inset: 0;
+    z-index: 0;
+    background:
+      radial-gradient(ellipse 70% 50% at 5% 0%, rgba(108,99,255,0.09) 0%, transparent 60%),
+      radial-gradient(ellipse 50% 40% at 95% 100%, rgba(67,217,173,0.06) 0%, transparent 55%);
+    pointer-events: none;
+  }
+  #root { position: relative; z-index: 1; }
+
   ::-webkit-scrollbar { width: 6px; }
   ::-webkit-scrollbar-track { background: var(--surface); }
   ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
@@ -60,6 +84,7 @@ const STYLE = `
     height: 100vh;
     overflow: hidden;
   }
+
 
   /* ── MOBILE ── */
   @media (max-width: 768px) {
@@ -121,7 +146,9 @@ const STYLE = `
   /* ── TOPBAR ── */
   .topbar {
     grid-column: 1 / -1;
-    background: var(--surface);
+    background: rgba(13,16,23,0.85);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
     border-bottom: 1px solid var(--border);
     display: flex;
     align-items: center;
@@ -166,6 +193,7 @@ const STYLE = `
   .avatar.sm { width: 24px; height: 24px; font-size: 10px; }
 
   /* ── SIDEBAR ── */
+  .sidebar-hidden-mobile { display: none !important; }
   .sidebar {
     background: var(--surface);
     border-right: 1px solid var(--border);
@@ -254,6 +282,12 @@ const STYLE = `
   .btn-success { background: #43d9ad22; color: var(--accent3); border: 1px solid #43d9ad33; }
   .btn-success:hover { background: #43d9ad44; }
   .btn:disabled { opacity: 0.5; cursor: not-allowed; }
+
+  /* ── FULL WIDTH when sidebar hidden ── */
+  .app.no-sidebar {
+    grid-template-columns: 0 1fr;
+  }
+  .app.no-sidebar .sidebar { display: none; }
 
   /* ── MAIN ── */
   .main {
@@ -937,7 +971,7 @@ function NewIdeaModal({ onClose, onCreate, currentUser }) {
   return (
     <div className="modal-overlay" onClick={e => e.target === e.currentTarget && onClose()}>
       <div className="modal">
-        <h3>➕ Nuova Idea di Business</h3>
+        <h3>+ Nuova Idea di Business</h3>
         <div className="form-row">
           <div className="form-group" style={{ flex: "0 0 auto" }}>
             <label className="form-label">Icona</label>
@@ -1465,7 +1499,7 @@ function ReportsPage({ currentUser, onHome }) {
       {/* Back + Title */}
       <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 16 }}>
         <button className="btn btn-ghost btn-sm" onClick={onHome}>← Home</button>
-        <h2 style={{ fontSize: 20, margin: 0 }}>🗂 Documenti</h2>
+        <h2 style={{ fontSize: 20, margin: 0 }}>Documenti</h2>
       </div>
 
       {/* Full-width CTA */}
@@ -1475,7 +1509,7 @@ function ReportsPage({ currentUser, onHome }) {
         onClick={() => setShowUploadModal(true)}
         disabled={uploading}
       >
-        {uploading ? "⏳ Caricamento..." : "⬆️ Carica Documento"}
+        {uploading ? "⏳ Caricamento..." : "↑ Carica Documento"}
       </button>
       <input
         ref={fileRef} type="file" style={{ display: "none" }}
@@ -1543,7 +1577,7 @@ function ReportsPage({ currentUser, onHome }) {
               <span>💾 {formatSize(r.size)}</span>
             </div>
             <div style={{ display: "flex", gap: 8 }}>
-              <button className="btn btn-primary btn-sm" style={{ flex: 1, justifyContent: "center" }} onClick={() => downloadReport(r)}>⬇️ Scarica</button>
+              <button className="btn btn-primary btn-sm" style={{ flex: 1, justifyContent: "center" }} onClick={() => downloadReport(r)}>↓ Scarica</button>
               <button className="btn btn-danger btn-sm" onClick={() => removeReport(r.id)}>🗑</button>
             </div>
           </div>
@@ -1554,7 +1588,7 @@ function ReportsPage({ currentUser, onHome }) {
       {showUploadModal && (
         <div className="modal-overlay" onClick={e => e.target === e.currentTarget && setShowUploadModal(false)}>
           <div className="modal">
-            <h3>⬆️ Carica Documento</h3>
+            <h3>↑ Carica Documento</h3>
             <div className="form-group">
               <label className="form-label">Categoria</label>
               <div style={{ display: "flex", gap: 8 }}>
@@ -1651,9 +1685,9 @@ function HomePage({ ideas, onSelect, onNew, getIdeaScore }) {
     <div style={{ padding: "24px 16px", maxWidth: 1100, margin: "0 auto" }}>
       {/* Header */}
       <div style={{ marginBottom: 20 }}>
-        <h2 style={{ fontSize: 22, marginBottom: 6 }}>👋 Benvenuto su Idealmente</h2>
+        <h2 style={{ fontSize: 22, marginBottom: 6 }}>Benvenuto su Idealmente</h2>
         <p style={{ color: "var(--text2)", fontSize: 14, marginBottom: 16 }}>Seleziona un'idea da approfondire o creane una nuova.</p>
-        <button className="btn btn-primary" style={{ width: "100%" }} onClick={onNew}>➕ Nuova Idea</button>
+        <button className="btn btn-primary" style={{ width: "100%" }} onClick={onNew}>+ Nuova Idea</button>
       </div>
 
       {ideas.length === 0 ? (
@@ -1773,7 +1807,7 @@ function NewMeetingModal({ onClose, onCreate }) {
   return (
     <div className="modal-overlay" onClick={e => e.target === e.currentTarget && onClose()}>
       <div className="modal">
-        <h3>📅 Nuovo Meeting</h3>
+        <h3>Nuovo Meeting</h3>
         <div className="form-group">
           <label className="form-label">Titolo *</label>
           <input className="form-input" value={title} onChange={e => setTitle(e.target.value)} placeholder="Es. Review Q1 — Idee Business" />
@@ -1867,12 +1901,12 @@ function MeetingsPage({ onHome }) {
       {/* Back + Title */}
       <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 16 }}>
         <button className="btn btn-ghost btn-sm" onClick={onHome}>← Home</button>
-        <h2 style={{ fontSize: 20, margin: 0 }}>📅 Meeting</h2>
+        <h2 style={{ fontSize: 20, margin: 0 }}>Meeting</h2>
       </div>
 
       {/* Full-width CTA */}
       <button className="btn btn-primary" style={{ width: "100%", justifyContent: "center", marginBottom: 20, padding: "12px", fontSize: 15 }} onClick={() => setShowNew(true)}>
-        📅 Nuovo Meeting
+        Nuovo Meeting
       </button>
 
       {/* NEXT MEETING BANNER */}
@@ -2305,7 +2339,7 @@ export default function App() {
   return (
     <>
       <style>{STYLE}</style>
-      <div className="app">
+      <div className={`app${!(page === "ideas" && !selectedId) ? " no-sidebar" : ""}`}>
         {/* TOPBAR */}
         <div className="topbar">
           <div className="topbar-logo">Idealmente</div>
@@ -2313,9 +2347,9 @@ export default function App() {
           {/* NAV */}
           <div className="topbar-nav" style={{ display: "flex", gap: 4 }}>
             {[
-              ["ideas", "💡", "Idee"],
-              ["meetings", "📅", "Meeting"],
-              ["reports", "🗂", "Documenti"],
+              ["ideas", "◈", "Idee"],
+              ["meetings", "◷", "Meeting"],
+              ["reports", "◫", "Documenti"],
             ].map(([key, icon, label]) => (
               <button
                 key={key}
@@ -2385,11 +2419,11 @@ export default function App() {
         </div>
 
         {/* SIDEBAR */}
-        <div className={`sidebar${selectedId && page === "ideas" ? " sidebar-hidden-mobile" : ""}`}>
+        <div className={`sidebar${(selectedId && page === "ideas") || page !== "ideas" ? " sidebar-hidden-mobile" : ""}`}>
           {page === "ideas" && (
             <div className="sidebar-section">
               <button className="btn btn-primary" style={{ width: "100%", justifyContent: "center" }} onClick={() => { setPage("ideas"); setShowNew(true); }}>
-                ➕ Nuova Idea
+                + Nuova Idea
               </button>
             </div>
           )}
