@@ -90,7 +90,7 @@ const STYLE = `
     /* Hide email on mobile */
     .topbar-user-email { display: none !important; }
     /* Show hamburger on mobile */
-    .hamburger-btn { display: flex !important; }
+    .hamburger-btn { display: flex !important; margin-right: 8px; }
     /* Hide sidebar CTA on mobile (accessible from homepage) */
     .sidebar-new-btn { display: none !important; }
     .sidebar {
@@ -135,8 +135,22 @@ const STYLE = `
     /* Document/meeting cards: no horizontal overflow */
     .meeting-card { padding: 12px !important; }
     /* Filter tabs: scrollable if needed */
-    .tabs { overflow-x: auto; flex-wrap: nowrap !important; }
-    .tab { white-space: nowrap; flex-shrink: 0; }
+    /* Idea tabs: 2x2 grid on mobile */
+    .idea-tabs { 
+      display: grid !important; 
+      grid-template-columns: 1fr 1fr;
+      width: 100% !important;
+      gap: 4px;
+    }
+    .idea-tabs .tab { 
+      text-align: center; 
+      font-size: 12px !important;
+      padding: 8px 4px !important;
+      white-space: nowrap;
+    }
+    /* Other tabs: scrollable */
+    .tabs:not(.idea-tabs) { overflow-x: auto; flex-wrap: nowrap !important; }
+    .tabs:not(.idea-tabs) .tab { white-space: nowrap; flex-shrink: 0; }
     /* Buttons: no overflow */
     .btn { white-space: nowrap; }
     /* Comments: wrap text */
@@ -1497,6 +1511,117 @@ function AITab({ idea, onUpdate }) {
   );
 }
 
+
+// ─── IDEA DOCS TAB ───────────────────────────────────────────────────────────
+
+function IdeaDocsTab({ idea, currentUser, onUpdate }) {
+  const [uploading, setUploading] = useState(false);
+  const fileRef = useRef(null);
+  const docs = idea.docs || [];
+
+  const handleFile = async (f) => {
+    if (!f) return;
+    setUploading(true);
+    const reader = new FileReader();
+    reader.onload = async (e) => {
+      const doc = {
+        id: Date.now().toString(),
+        name: f.name,
+        size: f.size,
+        type: f.type,
+        content: e.target.result,
+        uploadedBy: currentUser,
+        uploadedAt: Date.now(),
+      };
+      await onUpdate({ ...idea, docs: [...docs, doc] });
+      setUploading(false);
+    };
+    reader.readAsDataURL(f);
+  };
+
+  const downloadDoc = (doc) => {
+    const a = document.createElement("a");
+    a.href = doc.content;
+    a.download = doc.name;
+    a.click();
+  };
+
+  const deleteDoc = async (id) => {
+    await onUpdate({ ...idea, docs: docs.filter(d => d.id !== id) });
+  };
+
+  const formatSize = (bytes) => {
+    if (bytes < 1024) return `${bytes} B`;
+    if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
+    return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
+  };
+
+  const getIcon = (name) => {
+    const ext = (name || "").split(".").pop().toLowerCase();
+    if (ext === "pdf") return "📄";
+    if (["doc","docx"].includes(ext)) return "📝";
+    if (["xls","xlsx"].includes(ext)) return "📊";
+    if (["ppt","pptx"].includes(ext)) return "📋";
+    if (["png","jpg","jpeg","gif","webp"].includes(ext)) return "🖼️";
+    return "📎";
+  };
+
+  return (
+    <div style={{ padding: "4px 0" }}>
+      {/* Upload CTA */}
+      <button
+        className="btn btn-primary"
+        style={{ width: "100%", justifyContent: "center", marginBottom: 16, padding: "12px" }}
+        onClick={() => fileRef.current.click()}
+        disabled={uploading}
+      >
+        {uploading ? "⏳ Caricamento..." : "↑ Carica Documento"}
+      </button>
+      <input
+        ref={fileRef} type="file" style={{ display: "none" }}
+        accept=".pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx,.txt,.md,.png,.jpg,.jpeg"
+        onChange={e => { handleFile(e.target.files[0]); e.target.value = ""; }}
+      />
+
+      {/* Doc list */}
+      {docs.length === 0 ? (
+        <div style={{ textAlign: "center", padding: "40px 0", color: "var(--text3)" }}>
+          <div style={{ fontSize: 32, marginBottom: 12, opacity: 0.4 }}>📂</div>
+          <p style={{ fontSize: 13 }}>Nessun documento caricato per questa idea.</p>
+        </div>
+      ) : (
+        <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+          {docs.map(doc => (
+            <div key={doc.id} style={{
+              display: "flex", alignItems: "center", gap: 12,
+              background: "var(--surface2)", border: "1px solid var(--border)",
+              borderRadius: "var(--radius)", padding: "12px 16px",
+            }}>
+              <span style={{ fontSize: 22, flexShrink: 0 }}>{getIcon(doc.name)}</span>
+              <div style={{ flex: 1, minWidth: 0 }}>
+                <div style={{ fontSize: 13, fontWeight: 600, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{doc.name}</div>
+                <div style={{ fontSize: 11, color: "var(--text3)", marginTop: 2 }}>
+                  {formatSize(doc.size)} · {doc.uploadedBy} · {formatDate(doc.uploadedAt)}
+                </div>
+              </div>
+              <button
+                className="btn btn-ghost btn-sm"
+                style={{ flexShrink: 0, fontSize: 11 }}
+                onClick={() => downloadDoc(doc)}
+              >↓ Scarica</button>
+              <button
+                style={{ background: "none", border: "none", cursor: "pointer", color: "var(--text3)", fontSize: 16, padding: "0 4px", flexShrink: 0 }}
+                onClick={() => deleteDoc(doc.id)}
+                title="Rimuovi"
+              >×</button>
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
 function IdeaDetail({ idea, currentUser, onUpdate, onDelete }) {
   const [tab, setTab] = useState("overview");
   const allRatings = Object.values(idea.ratings || {});
@@ -1526,8 +1651,8 @@ function IdeaDetail({ idea, currentUser, onUpdate, onDelete }) {
         </div>
       </div>
 
-      <div className="tabs">
-        {[["overview", "📊 Overview"], ["comments", "💬 Discussione"], ["ai", "🤖 AI Analysis"]].map(([k, l]) => (
+      <div className="tabs idea-tabs">
+        {[["overview", "📊 Overview"], ["comments", "💬 Discussione"], ["ai", "🤖 AI Analysis"], ["docs", "📁 Documenti"]].map(([k, l]) => (
           <button key={k} className={`tab ${tab === k ? "active" : ""}`} onClick={() => setTab(k)}>{l}</button>
         ))}
       </div>
@@ -1535,6 +1660,7 @@ function IdeaDetail({ idea, currentUser, onUpdate, onDelete }) {
       {tab === "overview" && <OverviewTab idea={idea} currentUser={currentUser} onUpdate={onUpdate} />}
       {tab === "comments" && <CommentsTab idea={idea} currentUser={currentUser} onUpdate={onUpdate} />}
       {tab === "ai" && <AITab idea={idea} onUpdate={onUpdate} />}
+      {tab === "docs" && <IdeaDocsTab idea={idea} currentUser={currentUser} onUpdate={onUpdate} />}
     </div>
   );
 }
