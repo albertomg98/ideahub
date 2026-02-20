@@ -2062,6 +2062,7 @@ function HomePage({ ideas, onSelect, onNew, getIdeaScore }) {
                 onMouseEnter={e => { e.currentTarget.style.background = "var(--surface2)"; e.currentTarget.style.borderLeftColor = "var(--accent3)"; }}
                 onMouseLeave={e => { e.currentTarget.style.background = "var(--surface)"; e.currentTarget.style.borderLeftColor = "var(--accent)"; }}
               >
+                {/* Row 1: emoji + title */}
                 <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
                   <div style={{
                     width: 44, height: 44, borderRadius: 12, flexShrink: 0,
@@ -2069,12 +2070,31 @@ function HomePage({ ideas, onSelect, onNew, getIdeaScore }) {
                     border: "1px solid var(--border)",
                     display: "flex", alignItems: "center", justifyContent: "center", fontSize: 20,
                   }}>{idea.emoji}</div>
-                  <div style={{ flex: 1, minWidth: 0 }}>
-                    <div style={{ fontFamily: "'Syne', sans-serif", fontWeight: 700, fontSize: 14, marginBottom: 2, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{idea.title}</div>
-                    <div style={{ fontSize: 11, color: "var(--text3)" }}>👤 {idea.createdBy} · {formatDate(idea.createdAt)}</div>
-                  </div>
-                  {verdict && <span className={`verdict-chip ${verdict.cls}`} style={{ fontSize: 10, flexShrink: 0 }}>{verdict.label}</span>}
+                  <div style={{ fontFamily: "'Syne', sans-serif", fontWeight: 700, fontSize: 15, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{idea.title}</div>
                 </div>
+
+                {/* Row 2: avatar + email */}
+                <div style={{ display: "flex", alignItems: "center", gap: 7, fontSize: 11, color: "var(--text3)", marginTop: -8 }}>
+                  <div style={{
+                    width: 16, height: 16, borderRadius: "50%", flexShrink: 0,
+                    background: "linear-gradient(135deg, var(--accent), var(--accent3))",
+                    display: "flex", alignItems: "center", justifyContent: "center",
+                    fontSize: 8, fontWeight: 700, color: "#fff",
+                  }}>{(idea.createdBy || "?")[0].toUpperCase()}</div>
+                  <span style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{idea.createdBy}</span>
+                </div>
+
+                {/* Row 3: date */}
+                <div style={{ fontSize: 11, color: "var(--text3)", marginTop: -10, paddingLeft: 23 }}>
+                  {formatDate(idea.createdAt)}
+                </div>
+
+                {/* Row 4: verdict chip */}
+                {verdict && (
+                  <div style={{ marginTop: -6 }}>
+                    <span className={`verdict-chip ${verdict.cls}`} style={{ fontSize: 11 }}>{verdict.label}</span>
+                  </div>
+                )}
 
                 {idea.description && (
                   <p style={{ fontSize: 13, color: "var(--text2)", lineHeight: 1.6, display: "-webkit-box", WebkitLineClamp: 2, WebkitBoxOrient: "vertical", overflow: "hidden" }}>
