@@ -38,6 +38,7 @@ const STYLE = `
 
   html, body, #root { height: 100%; width: 100%; }
 
+  *, *::before, *::after { box-sizing: border-box; }
   body {
     background: var(--bg);
     color: var(--text);
@@ -46,6 +47,7 @@ const STYLE = `
     line-height: 1.7;
     -webkit-font-smoothing: antialiased;
     letter-spacing: 0.01em;
+    overflow-x: hidden;
   }
 
   ::-webkit-scrollbar { width: 3px; }
@@ -60,6 +62,7 @@ const STYLE = `
     grid-template-rows: 52px 1fr;
     height: 100vh;
     overflow: hidden;
+    max-width: 100vw;
   }
 
 
@@ -124,8 +127,24 @@ const STYLE = `
     .criteria-label { width: 80px !important; font-size: 11px !important; }
     .criteria-val { font-size: 11px !important; }
     .swot-grid { grid-template-columns: 1fr; }
+    .page-container { padding: 14px !important; }
     .score-grid { grid-template-columns: repeat(2, 1fr); }
     .modal { width: 95vw; padding: 16px; max-height: 90vh; overflow-y: auto; }
+    /* ReportsPage + MeetingsPage full-width on mobile */
+    [style*="maxWidth: 860"], [style*="max-width: 860px"] { max-width: 100% !important; padding-left: 14px !important; padding-right: 14px !important; }
+    /* Document/meeting cards: no horizontal overflow */
+    .meeting-card { padding: 12px !important; }
+    /* Filter tabs: scrollable if needed */
+    .tabs { overflow-x: auto; flex-wrap: nowrap !important; }
+    .tab { white-space: nowrap; flex-shrink: 0; }
+    /* Buttons: no overflow */
+    .btn { white-space: nowrap; }
+    /* Comments: wrap text */
+    .comment-text { word-break: break-word; }
+    /* AI analysis cards: full width */
+    .ai-card { max-width: 100%; }
+    /* Detail actions: wrap on small screens */
+    .detail-actions { flex-wrap: wrap; }
     .form-row { flex-direction: column; }
     .meeting-card { flex-wrap: wrap; }
     .meeting-actions { width: 100%; justify-content: flex-end; }
@@ -1799,7 +1818,7 @@ function TrashPage({ trash, onRestore, onDelete, onHome }) {
   const getFileIcon = (idea) => idea.emoji || "◈";
 
   return (
-    <div style={{ padding: "20px 16px", maxWidth: 860, margin: "0 auto" }}>
+    <div className="page-container" style={{ padding: "20px 16px", maxWidth: 860, margin: "0 auto" }}>
       {/* Header */}
       <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 24, paddingBottom: 20, borderBottom: "1px solid var(--border)" }}>
         <button className="btn btn-ghost btn-sm" onClick={onHome}>← Home</button>
@@ -2599,7 +2618,7 @@ export default function App() {
               style={{ display: "flex", gap: 8, alignItems: "center", cursor: "pointer" }}
               onClick={() => setShowUserMenu(v => !v)}
             >
-              <span style={{ fontSize: 13, color: "var(--text2)" }}>{currentUser}</span>
+              <span className="topbar-user-email" style={{ fontSize: 13, color: "var(--text2)" }}>{currentUser}</span>
               <div className="avatar" style={{ background: `linear-gradient(135deg, ${hashColor(currentUser)}, ${hashColor(currentUser + "2")})` }}>
                 {initials(currentUser)}
               </div>
