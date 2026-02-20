@@ -88,6 +88,8 @@ const STYLE = `
     .topbar-user-email { display: none !important; }
     /* Show hamburger on mobile */
     .hamburger-btn { display: flex !important; }
+    /* Hide sidebar CTA on mobile (accessible from homepage) */
+    .sidebar-new-btn { display: none !important; }
     .sidebar {
       grid-column: 1;
       border-right: none;
@@ -129,7 +131,7 @@ const STYLE = `
     .meeting-actions { width: 100%; justify-content: flex-end; }
     /* Prevent CTA overlap with topbar nav on mobile */
     .main { padding-top: 0; }
-    .topbar-nav button { min-height: 38px; }
+
   }
 
   /* ── TOPBAR ── */
@@ -2551,7 +2553,7 @@ export default function App() {
           <div className="topbar-logo">Idealmente</div>
           <div className="topbar-spacer" />
           {/* NAV */}
-          <div className="topbar-nav" style={{ display: "flex", gap: 4 }}>
+          <div className="topbar-nav topbar-nav-desktop" style={{ display: "flex", gap: 0 }}>
             {[
               ["ideas", "◈", "Idee"],
               ["meetings", "◷", "Meeting"],
@@ -2683,7 +2685,7 @@ export default function App() {
         <div className={`sidebar${selectedId && page === "ideas" ? " sidebar-hidden-mobile" : ""}`}>
           {page === "ideas" && (
             <div className="sidebar-section">
-              <button className="btn btn-primary" style={{ width: "100%", justifyContent: "center" }} onClick={() => { setPage("ideas"); setShowNew(true); }}>
+              <button className="btn btn-primary sidebar-new-btn" style={{ width: "100%", justifyContent: "center" }} onClick={() => { setPage("ideas"); setShowNew(true); }}>
                 + Nuova Idea
               </button>
             </div>
