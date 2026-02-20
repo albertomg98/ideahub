@@ -70,35 +70,24 @@ const STYLE = `
       grid-template-rows: auto auto 1fr;
       height: 100dvh;
     }
+    /* Topbar: single row logo + hamburger + avatar */
     .topbar {
       position: sticky;
       top: 0;
       z-index: 20;
-      flex-wrap: wrap;
-      padding: 10px 16px 0 16px;
-      gap: 6px;
-      height: auto;
+      flex-wrap: nowrap;
+      padding: 0 16px;
+      gap: 8px;
+      height: 52px;
     }
-    .topbar-logo { font-size: 13px; order: 1; }
-    .topbar-spacer { display: none; }
-    .topbar-user-wrap { order: 2; margin-left: auto; }
-    .topbar-nav { 
-      order: 3; 
-      width: 100%; 
-      justify-content: stretch;
-      border-top: 1px solid var(--border);
-      margin-top: 6px;
-    }
-    .topbar-nav button { 
-      flex: 1; 
-      justify-content: center; 
-      font-size: 10px !important; 
-      padding: 10px 4px !important;
-      height: auto !important;
-      letter-spacing: 0.06em !important;
-      flex-direction: column;
-      gap: 2px !important;
-    }
+    .topbar-logo { font-size: 13px; }
+    .topbar-spacer { flex: 1; }
+    /* Hide desktop nav on mobile */
+    .topbar-nav-desktop { display: none !important; }
+    /* Hide email on mobile */
+    .topbar-user-email { display: none !important; }
+    /* Show hamburger on mobile */
+    .hamburger-btn { display: flex !important; }
     .sidebar {
       grid-column: 1;
       border-right: none;
@@ -179,6 +168,80 @@ const STYLE = `
     font-size: 13px;
     cursor: pointer;
   }
+
+  /* ── HAMBURGER ── */
+  .hamburger-btn {
+    display: none;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    gap: 5px;
+    width: 36px;
+    height: 36px;
+    background: transparent;
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    cursor: pointer;
+    flex-shrink: 0;
+    padding: 0;
+  }
+  .ham-line {
+    display: block;
+    width: 16px;
+    height: 1.5px;
+    background: var(--text);
+    border-radius: 2px;
+    transition: all 0.2s;
+  }
+
+  /* ── MOBILE MENU OVERLAY ── */
+  .mobile-menu-overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,0.6);
+    z-index: 200;
+    backdrop-filter: blur(4px);
+  }
+  .mobile-menu-panel {
+    position: absolute;
+    top: 0;
+    right: 0;
+    width: 220px;
+    height: 100%;
+    background: var(--surface);
+    border-left: 1px solid var(--border);
+    padding: 56px 0 24px;
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+  }
+  .mobile-menu-item {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    padding: 16px 24px;
+    background: transparent;
+    border: none;
+    cursor: pointer;
+    font-family: 'DM Sans', sans-serif;
+    font-size: 13px;
+    font-weight: 600;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--text2);
+    text-align: left;
+    width: 100%;
+    transition: all 0.15s;
+    border-left: 3px solid transparent;
+  }
+  .mobile-menu-item.active {
+    color: var(--text);
+    background: var(--surface2);
+    border-left-color: var(--accent);
+  }
+  .mobile-menu-item:active { background: var(--surface2); }
+  .mobile-menu-icon { font-size: 16px; width: 20px; text-align: center; }
+  .mobile-menu-label { flex: 1; }
   .avatar {
     width: 30px; height: 30px;
     border-radius: 50%;
@@ -2392,6 +2455,7 @@ export default function App() {
   const [loaded, setLoaded] = useState(false);
   const [showUserMenu, setShowUserMenu] = useState(false);
   const [showChangePwd, setShowChangePwd] = useState(false);
+  const [showMobileMenu, setShowMobileMenu] = useState(false);
 
   // Listen to Firebase auth state
   useEffect(() => {
@@ -2515,6 +2579,18 @@ export default function App() {
             ))}
           </div>
           <div className="topbar-spacer" />
+
+          {/* HAMBURGER (mobile only) */}
+          <button
+            className="hamburger-btn"
+            onClick={() => setShowMobileMenu(v => !v)}
+            aria-label="Menu"
+          >
+            <span className="ham-line" />
+            <span className="ham-line" />
+            <span className="ham-line" />
+          </button>
+
           {/* USER MENU */}
           <div className="topbar-user-wrap" style={{ position: "relative" }}>
             <div
@@ -2564,6 +2640,44 @@ export default function App() {
             )}
           </div>
         </div>
+
+        {/* MOBILE NAV OVERLAY */}
+        {showMobileMenu && (
+          <div
+            className="mobile-menu-overlay"
+            onClick={() => setShowMobileMenu(false)}
+          >
+            <div className="mobile-menu-panel" onClick={e => e.stopPropagation()}>
+              {[
+                ["ideas", "◈", "Idee", null],
+                ["meetings", "◷", "Meeting", null],
+                ["reports", "◫", "Documenti", null],
+                ["trash", "◌", "Cestino", trash.length],
+              ].map(([key, icon, label, count]) => (
+                <button
+                  key={key}
+                  className={`mobile-menu-item${page === key ? " active" : ""}`}
+                  onClick={() => {
+                    setPage(key);
+                    if (key === "ideas") setSelectedId(null);
+                    setShowMobileMenu(false);
+                  }}
+                >
+                  <span className="mobile-menu-icon">{icon}</span>
+                  <span className="mobile-menu-label">{label}</span>
+                  {count > 0 && (
+                    <span style={{
+                      marginLeft: "auto",
+                      background: "var(--accent2)", color: "#fff",
+                      borderRadius: 10, padding: "2px 7px",
+                      fontSize: 10, fontWeight: 700,
+                    }}>{count}</span>
+                  )}
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
 
         {/* SIDEBAR */}
         <div className={`sidebar${selectedId && page === "ideas" ? " sidebar-hidden-mobile" : ""}`}>
