@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef } from "react";
+import * as mammoth from "mammoth";
 import { db, auth } from "./firebase";
 import {
   collection, doc, setDoc, deleteDoc, onSnapshot, orderBy, query
@@ -906,6 +907,31 @@ function formatDate(ts) {
   return new Date(ts).toLocaleDateString("it-IT", { day: "2-digit", month: "short", year: "numeric" });
 }
 
+function downloadFile(dataUrl, fileName) {
+  try {
+    const arr = dataUrl.split(",");
+    const mime = arr[0].match(/:(.*?);/)[1];
+    const bstr = atob(arr[1]);
+    const n = bstr.length;
+    const u8arr = new Uint8Array(n);
+    for (let i = 0; i < n; i++) u8arr[i] = bstr.charCodeAt(i);
+    const blob = new Blob([u8arr], { type: mime });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = fileName || "documento";
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    setTimeout(() => URL.revokeObjectURL(url), 1000);
+  } catch (e) {
+    const a = document.createElement("a");
+    a.href = dataUrl;
+    a.download = fileName || "documento";
+    a.click();
+  }
+}
+
 function initials(name) {
   return name.split(" ").map(w => w[0]).join("").toUpperCase().slice(0, 2);
 }
@@ -1215,9 +1241,10 @@ function DocAttachmentCard({ idea, onUpdate }) {
         </div>
         <div style={{ display: "flex", gap: 6, flexShrink: 0 }}>
           {idea.docText && (
-            <a href={idea.docText} download={idea.fileName || "documento"}
-              className="btn btn-ghost btn-sm"
-              style={{ fontSize: 11, textDecoration: "none" }}>↓ Scarica</a>
+            <button className="btn btn-ghost btn-sm" style={{ fontSize: 11 }}
+              onClick={() => downloadFile(idea.docText, idea.fileName || "documento")}>
+              ↓ Scarica
+            </button>
           )}
           <button className="btn btn-ghost btn-sm" style={{ fontSize: 11 }}
             onClick={() => { setReplacing(true); setTimeout(() => fileRef.current?.click(), 100); }}
@@ -1269,15 +1296,6 @@ function DocViewer({ content, fileName, fileType }) {
     setDocxLoading(true);
     const loadMammoth = async () => {
       try {
-        if (!window.mammoth) {
-          await new Promise((resolve, reject) => {
-            const script = document.createElement("script");
-            script.src = "https://cdnjs.cloudflare.com/ajax/libs/mammoth/1.6.0/mammoth.browser.min.js";
-            script.onload = resolve;
-            script.onerror = reject;
-            document.head.appendChild(script);
-          });
-        }
         // Handle both base64 dataURL and legacy raw binary string
         let bytes;
         if (content.startsWith("data:")) {
@@ -1290,7 +1308,7 @@ function DocViewer({ content, fileName, fileType }) {
           bytes = new Uint8Array(content.length);
           for (let i = 0; i < content.length; i++) bytes[i] = content.charCodeAt(i) & 0xff;
         }
-        const result = await window.mammoth.convertToHtml({ arrayBuffer: bytes.buffer });
+        const result = await mammoth.convertToHtml({ arrayBuffer: bytes.buffer });
         if (result.value && result.value.trim().length > 10) {
           setDocxHtml(result.value);
         } else {
@@ -1384,7 +1402,7 @@ function DocViewer({ content, fileName, fileType }) {
     if (docxError) return (
       <div style={{ padding: 16, background: "var(--surface2)", borderRadius: "var(--radius)", textAlign: "center" }}>
         <p style={{ color: "var(--text2)", fontSize: 13, marginBottom: 12 }}>{docxError}</p>
-        <a href={content} download={fileName} className="btn btn-primary btn-sm" style={{ textDecoration: "none", display: "inline-flex" }}>↓ Scarica</a>
+        <button className="btn btn-primary btn-sm" onClick={() => downloadFile(content, fileName)}>↓ Scarica</button>
       </div>
     );
     return (
@@ -1431,12 +1449,10 @@ function DocViewer({ content, fileName, fileType }) {
         Il file {label} non può essere visualizzato nel browser.<br/>
         Scaricalo per aprirlo con l'applicazione appropriata.
       </p>
-      <a
-        href={content}
-        download={fileName || "documento"}
-        className="btn btn-primary btn-sm"
-        style={{ textDecoration: "none", display: "inline-flex" }}
-      >↓ Scarica {label}</a>
+      <button className="btn btn-primary btn-sm"
+        onClick={() => downloadFile(content, fileName || "documento")}>
+        ↓ Scarica {label}
+      </button>
     </div>
   );
 }
@@ -1834,10 +1850,7 @@ function IdeaDocsTab({ idea, currentUser, onUpdate }) {
   };
 
   const downloadDoc = (doc) => {
-    const a = document.createElement("a");
-    a.href = doc.content;
-    a.download = doc.name;
-    a.click();
+    downloadFile(doc.content, doc.name);
   };
 
   const deleteDoc = async (id) => {
@@ -2012,10 +2025,7 @@ function ReportsPage({ currentUser, onHome }) {
   };
 
   const downloadReport = (report) => {
-    const a = document.createElement("a");
-    a.href = report.content;
-    a.download = report.name;
-    a.click();
+    downloadFile(report.content, report.name);
   };
 
   const formatSize = (bytes) => {
