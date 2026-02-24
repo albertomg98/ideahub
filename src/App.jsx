@@ -967,7 +967,19 @@ async function removeMeeting(id) {
 // ─── AI ANALYSIS ─────────────────────────────────────────────────────────────
 
 async function runAIAnalysis(idea, apiKey) {
-  const docText = idea.docText || "(nessun documento caricato)";
+  let docText = "(nessun documento caricato)";
+  if (idea.docText) {
+    try {
+      const base64 = idea.docText.split(",")[1];
+      const decoded = atob(base64);
+      // Only use if it looks like readable text (not binary)
+      docText = decoded.length > 0 && decoded.slice(0,20).split("").some(c => c.charCodeAt(0) > 31)
+        ? decoded.slice(0, 3000)
+        : "(documento binario — non estraibile)";
+    } catch {
+      docText = idea.docText.slice(0, 3000);
+    }
+  }
   const prompt = `Sei un consulente strategico senior. Analizza questa idea di business in modo strutturato e conciso.
 
 TITOLO: ${idea.title}
@@ -1054,8 +1066,8 @@ function NewIdeaModal({ onClose, onCreate, currentUser }) {
     if (!f) return;
     setFile(f);
     const reader = new FileReader();
-    reader.onload = (e) => setDocText(e.target.result);
-    reader.readAsText(f);
+    reader.onload = (e) => setDocText(e.target.result); // base64 dataURL
+    reader.readAsDataURL(f);
   };
 
   const handleDrop = (e) => {
@@ -1073,6 +1085,8 @@ function NewIdeaModal({ onClose, onCreate, currentUser }) {
       emoji,
       docText,
       fileName: file?.name || null,
+      fileType: file?.type || null,
+      fileSize: file?.size || null,
       createdBy: currentUser,
       createdAt: Date.now(),
       comments: [],
@@ -1139,6 +1153,186 @@ function NewIdeaModal({ onClose, onCreate, currentUser }) {
           <button className="btn btn-primary" onClick={handleCreate} disabled={!title.trim()}>Crea Idea</button>
         </div>
       </div>
+    </div>
+  );
+}
+
+
+// ─── DOC VIEWER ──────────────────────────────────────────────────────────────
+
+function DocViewer({ content, fileName, fileType }) {
+  const [expanded, setExpanded] = useState(false);
+  const [docxHtml, setDocxHtml] = useState(null);
+  const [docxLoading, setDocxLoading] = useState(false);
+  const [docxError, setDocxError] = useState(null);
+
+  const name = (fileName || "").toLowerCase();
+  const type = fileType || "";
+  const isPdf = type.includes("pdf") || name.endsWith(".pdf");
+  const isImage = type.startsWith("image/") || /\.(png|jpg|jpeg|gif|webp)$/.test(name);
+  const isText = type.includes("text") || /\.(txt|md|csv)$/.test(name);
+  const isDocx = type.includes("wordprocessingml") || type.includes("msword") || name.endsWith(".docx") || name.endsWith(".doc");
+
+  // Load mammoth and convert docx on mount
+  useEffect(() => {
+    if (!isDocx || !content) return;
+    setDocxLoading(true);
+    const loadMammoth = async () => {
+      try {
+        // Load mammoth from CDN if not already loaded
+        if (!window.mammoth) {
+          await new Promise((resolve, reject) => {
+            const script = document.createElement("script");
+            script.src = "https://cdnjs.cloudflare.com/ajax/libs/mammoth/1.6.0/mammoth.browser.min.js";
+            script.onload = resolve;
+            script.onerror = reject;
+            document.head.appendChild(script);
+          });
+        }
+        // Convert base64 to ArrayBuffer
+        const base64 = content.split(",")[1];
+        const binary = atob(base64);
+        const bytes = new Uint8Array(binary.length);
+        for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
+        const result = await window.mammoth.convertToHtml({ arrayBuffer: bytes.buffer });
+        setDocxHtml(result.value);
+      } catch (e) {
+        setDocxError("Impossibile visualizzare il documento. Scaricalo per aprirlo.");
+      } finally {
+        setDocxLoading(false);
+      }
+    };
+    loadMammoth();
+  }, [isDocx, content]);
+
+  if (!content) return null;
+
+  if (isPdf) {
+    return (
+      <div>
+        <iframe
+          src={content}
+          style={{
+            width: "100%",
+            height: expanded ? "80vh" : 480,
+            border: "none",
+            borderRadius: "var(--radius)",
+            background: "#fff",
+          }}
+          title={fileName}
+        />
+        <button
+          className="btn btn-ghost btn-sm"
+          style={{ marginTop: 8, fontSize: 11 }}
+          onClick={() => setExpanded(v => !v)}
+        >
+          {expanded ? "↑ Riduci" : "↕ Espandi"}
+        </button>
+      </div>
+    );
+  }
+
+  if (isImage) {
+    return (
+      <img
+        src={content}
+        alt={fileName}
+        style={{ maxWidth: "100%", borderRadius: "var(--radius)", display: "block" }}
+      />
+    );
+  }
+
+  if (isText) {
+    // Decode base64 text content
+    let text = "";
+    try {
+      const base64 = content.split(",")[1];
+      text = atob(base64);
+    } catch {
+      text = content;
+    }
+    const preview = expanded ? text : text.slice(0, 2000);
+    return (
+      <div>
+        <div className="doc-preview" style={{ maxHeight: expanded ? "none" : 320, overflow: "hidden" }}>
+          {preview}{!expanded && text.length > 2000 ? "\n\n[…]" : ""}
+        </div>
+        {text.length > 2000 && (
+          <button
+            className="btn btn-ghost btn-sm"
+            style={{ marginTop: 8, fontSize: 11 }}
+            onClick={() => setExpanded(v => !v)}
+          >
+            {expanded ? "↑ Mostra meno" : `↓ Mostra tutto (${(text.length / 1000).toFixed(0)}k caratteri)`}
+          </button>
+        )}
+      </div>
+    );
+  }
+
+  // DOCX viewer via mammoth
+  if (isDocx) {
+    if (docxLoading) return (
+      <div style={{ padding: 24, textAlign: "center", color: "var(--text3)", fontSize: 13 }}>
+        ⏳ Conversione documento in corso...
+      </div>
+    );
+    if (docxError) return (
+      <div style={{ padding: 16, background: "var(--surface2)", borderRadius: "var(--radius)", textAlign: "center" }}>
+        <p style={{ color: "var(--text2)", fontSize: 13, marginBottom: 12 }}>{docxError}</p>
+        <a href={content} download={fileName} className="btn btn-primary btn-sm" style={{ textDecoration: "none", display: "inline-flex" }}>↓ Scarica</a>
+      </div>
+    );
+    return (
+      <div>
+        <div
+          style={{
+            background: "#fff",
+            color: "#111",
+            borderRadius: "var(--radius)",
+            padding: "24px 32px",
+            maxHeight: expanded ? "none" : 480,
+            overflow: "hidden",
+            fontSize: 14,
+            lineHeight: 1.7,
+            fontFamily: "Georgia, serif",
+          }}
+          dangerouslySetInnerHTML={{ __html: docxHtml }}
+        />
+        <button
+          className="btn btn-ghost btn-sm"
+          style={{ marginTop: 8, fontSize: 11 }}
+          onClick={() => setExpanded(v => !v)}
+        >{expanded ? "↑ Riduci" : "↕ Espandi"}</button>
+      </div>
+    );
+  }
+
+  // Fallback: Excel, PPT — show download prompt
+  const extMap = {
+    "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet": "Excel",
+    "application/vnd.openxmlformats-officedocument.presentationml.presentation": "PowerPoint",
+  };
+  const label = extMap[type] || "documento";
+
+  return (
+    <div style={{
+      background: "var(--surface2)", borderRadius: "var(--radius)",
+      padding: "24px", textAlign: "center", border: "1px dashed var(--border)"
+    }}>
+      <div style={{ fontSize: 36, marginBottom: 10 }}>
+        {type.includes("sheet") ? "📊" : type.includes("presentation") ? "📋" : "📎"}
+      </div>
+      <p style={{ color: "var(--text2)", fontSize: 13, marginBottom: 16 }}>
+        Il file {label} non può essere visualizzato nel browser.<br/>
+        Scaricalo per aprirlo con l'applicazione appropriata.
+      </p>
+      <a
+        href={content}
+        download={fileName || "documento"}
+        className="btn btn-primary btn-sm"
+        style={{ textDecoration: "none", display: "inline-flex" }}
+      >↓ Scarica {label}</a>
     </div>
   );
 }
@@ -1253,8 +1447,18 @@ function OverviewTab({ idea, currentUser, onUpdate }) {
       {/* DOC PREVIEW */}
       {idea.docText && (
         <div className="card">
-          <div className="card-title">📄 Documento — {idea.fileName}</div>
-          <div className="doc-preview">{idea.docText.slice(0, 1500)}{idea.docText.length > 1500 ? "\n\n[…troncato per anteprima]" : ""}</div>
+          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 14 }}>
+            <div className="card-title" style={{ marginBottom: 0 }}>
+              📄 {idea.fileName || "Documento allegato"}
+            </div>
+            <a
+              href={idea.docText}
+              download={idea.fileName || "documento"}
+              className="btn btn-ghost btn-sm"
+              style={{ fontSize: 11, textDecoration: "none" }}
+            >↓ Scarica</a>
+          </div>
+          <DocViewer content={idea.docText} fileName={idea.fileName} fileType={idea.fileType} />
         </div>
       )}
     </div>
