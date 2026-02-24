@@ -1158,6 +1158,96 @@ function NewIdeaModal({ onClose, onCreate, currentUser }) {
 }
 
 
+
+// ─── DOC ATTACHMENT CARD ─────────────────────────────────────────────────────
+
+function DocAttachmentCard({ idea, onUpdate }) {
+  const [replacing, setReplacing] = useState(false);
+  const [uploading, setUploading] = useState(false);
+  const fileRef = useRef(null);
+
+  const handleReplace = (f) => {
+    if (!f) return;
+    setUploading(true);
+    const reader = new FileReader();
+    reader.onload = async (e) => {
+      await onUpdate({
+        ...idea,
+        docText: e.target.result,
+        fileName: f.name,
+        fileType: f.type,
+        fileSize: f.size,
+      });
+      setUploading(false);
+      setReplacing(false);
+    };
+    reader.readAsDataURL(f);
+  };
+
+  const handleRemove = async () => {
+    if (!window.confirm("Rimuovere il documento allegato?")) return;
+    await onUpdate({ ...idea, docText: null, fileName: null, fileType: null, fileSize: null });
+  };
+
+  if (!idea.docText && !replacing) {
+    return (
+      <div className="card">
+        <div className="card-title">Documento allegato</div>
+        <div style={{ textAlign: "center", padding: "20px 0" }}>
+          <p style={{ color: "var(--text3)", fontSize: 13, marginBottom: 14 }}>Nessun documento allegato a questa idea.</p>
+          <button className="btn btn-primary btn-sm" onClick={() => { setReplacing(true); setTimeout(() => fileRef.current?.click(), 100); }}>
+            ↑ Allega documento
+          </button>
+          <input ref={fileRef} type="file" style={{ display: "none" }}
+            accept=".pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx,.txt,.md,.png,.jpg,.jpeg"
+            onChange={e => handleReplace(e.target.files[0])} />
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="card">
+      {/* Header row */}
+      <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 14, flexWrap: "wrap" }}>
+        <div className="card-title" style={{ marginBottom: 0, flex: 1 }}>
+          📄 {idea.fileName || "Documento allegato"}
+        </div>
+        <div style={{ display: "flex", gap: 6, flexShrink: 0 }}>
+          {idea.docText && (
+            <a href={idea.docText} download={idea.fileName || "documento"}
+              className="btn btn-ghost btn-sm"
+              style={{ fontSize: 11, textDecoration: "none" }}>↓ Scarica</a>
+          )}
+          <button className="btn btn-ghost btn-sm" style={{ fontSize: 11 }}
+            onClick={() => { setReplacing(true); setTimeout(() => fileRef.current?.click(), 100); }}
+            disabled={uploading}>
+            {uploading ? "⏳" : "↺ Sostituisci"}
+          </button>
+          <button
+            style={{ background: "none", border: "1px solid var(--border)", borderRadius: "var(--radius)", padding: "4px 10px", cursor: "pointer", color: "var(--accent2)", fontSize: 11, fontFamily: "'DM Sans', sans-serif" }}
+            onClick={handleRemove}>✕ Rimuovi</button>
+        </div>
+      </div>
+
+      {/* Hidden file input */}
+      <input ref={fileRef} type="file" style={{ display: "none" }}
+        accept=".pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx,.txt,.md,.png,.jpg,.jpeg"
+        onChange={e => { handleReplace(e.target.files[0]); e.target.value = ""; }} />
+
+      {/* Viewer */}
+      {idea.docText && !uploading && (
+        <DocViewer content={idea.docText} fileName={idea.fileName} fileType={idea.fileType} />
+      )}
+      {uploading && (
+        <div style={{ padding: 24, textAlign: "center", color: "var(--text3)", fontSize: 13 }}>
+          ⏳ Caricamento in corso...
+        </div>
+      )}
+    </div>
+  );
+}
+
 // ─── DOC VIEWER ──────────────────────────────────────────────────────────────
 
 function DocViewer({ content, fileName, fileType }) {
@@ -1179,7 +1269,6 @@ function DocViewer({ content, fileName, fileType }) {
     setDocxLoading(true);
     const loadMammoth = async () => {
       try {
-        // Load mammoth from CDN if not already loaded
         if (!window.mammoth) {
           await new Promise((resolve, reject) => {
             const script = document.createElement("script");
@@ -1189,13 +1278,24 @@ function DocViewer({ content, fileName, fileType }) {
             document.head.appendChild(script);
           });
         }
-        // Convert base64 to ArrayBuffer
-        const base64 = content.split(",")[1];
-        const binary = atob(base64);
-        const bytes = new Uint8Array(binary.length);
-        for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
+        // Handle both base64 dataURL and legacy raw binary string
+        let bytes;
+        if (content.startsWith("data:")) {
+          const base64 = content.split(",")[1];
+          const binary = atob(base64);
+          bytes = new Uint8Array(binary.length);
+          for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
+        } else {
+          // Legacy: raw binary string stored directly
+          bytes = new Uint8Array(content.length);
+          for (let i = 0; i < content.length; i++) bytes[i] = content.charCodeAt(i) & 0xff;
+        }
         const result = await window.mammoth.convertToHtml({ arrayBuffer: bytes.buffer });
-        setDocxHtml(result.value);
+        if (result.value && result.value.trim().length > 10) {
+          setDocxHtml(result.value);
+        } else {
+          setDocxError("Il documento non contiene testo estraibile. Scaricalo per aprirlo.");
+        }
       } catch (e) {
         setDocxError("Impossibile visualizzare il documento. Scaricalo per aprirlo.");
       } finally {
@@ -1243,11 +1343,15 @@ function DocViewer({ content, fileName, fileType }) {
   }
 
   if (isText) {
-    // Decode base64 text content
+    // Decode base64 text content (or use raw if not base64)
     let text = "";
     try {
-      const base64 = content.split(",")[1];
-      text = atob(base64);
+      if (content.startsWith("data:")) {
+        const base64 = content.split(",")[1];
+        text = atob(base64);
+      } else {
+        text = content; // legacy: stored as raw text
+      }
     } catch {
       text = content;
     }
@@ -1445,22 +1549,8 @@ function OverviewTab({ idea, currentUser, onUpdate }) {
       </div>
 
       {/* DOC PREVIEW */}
-      {idea.docText && (
-        <div className="card">
-          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 14 }}>
-            <div className="card-title" style={{ marginBottom: 0 }}>
-              📄 {idea.fileName || "Documento allegato"}
-            </div>
-            <a
-              href={idea.docText}
-              download={idea.fileName || "documento"}
-              className="btn btn-ghost btn-sm"
-              style={{ fontSize: 11, textDecoration: "none" }}
-            >↓ Scarica</a>
-          </div>
-          <DocViewer content={idea.docText} fileName={idea.fileName} fileType={idea.fileType} />
-        </div>
-      )}
+      {/* DOCUMENTO ALLEGATO — visualizzazione + sostituzione */}
+      <DocAttachmentCard idea={idea} onUpdate={onUpdate} />
     </div>
   );
 }
